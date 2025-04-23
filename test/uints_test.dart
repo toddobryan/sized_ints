@@ -277,4 +277,28 @@ void main() {
       expect(Uint32(37).hashCode).toEqual(37.hashCode);
     });
   });
+
+  group('Uint64', () {
+    test('constructor', () {
+      expect(Uint64.fromInt(0).values).toEqual((0, 0));
+      expect(Uint64(0xFFFFFFFF, 0xFFFFFFFF)).toEqual(Uint64.max);
+      expect(Uint64.fromString('0xFFFFFFFF')).toEqual(Uint64(0, Uint32.max));
+      expect(Uint64.fromString('0xFFFFFFFFFFFFFFFF')).toEqual(Uint64.max);
+      expect(() => Uint64.fromInt(pow(2, 51) as int)).throws.isArgumentError();
+      expect(() => Uint64.fromInt(-3)).throws.isArgumentError();
+      expect(() => Uint64(Uint32.max + 1, 0)).throws.isArgumentError();
+      expect(() => Uint64(-100, Uint32.max)).throws.isArgumentError();
+      expect(() => Uint64(2, -3)).throws.isArgumentError();
+      expect(() => Uint64.fromString('-27')).throws.isArgumentError();
+    });
+
+    test('toString', () {
+      expect(Uint64.max.toString()).toEqual('18446744073709551615u64');
+      expect(Uint64(1, 0).toString()).toEqual('${Uint64.upperRightmostCol}u64');
+    });
+
+    test('hashCode', () {
+      expect(Uint64(3, 5).hashCode).toEqual(Object.hash(3, 5));
+    });
+  });
 }
