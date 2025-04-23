@@ -244,11 +244,15 @@ void main() {
     test('bitwise or', () {
       expect(Uint32(255) | Uint32(17)).toEqual(Uint32(255));
       expect(Uint32(21) | Uint32(42)).toEqual(Uint32(63));
+      expect(
+        Uint32(Uint32.max) | Uint32(Uint32.max),
+      ).toEqual(Uint32(Uint32.max));
     });
 
     test('bitwise xor', () {
       expect(Uint32(255) ^ Uint32(17)).toEqual(Uint32(238));
       expect(Uint32(21) ^ Uint32(42)).toEqual(Uint32(63));
+      expect(Uint32(Uint32.max) ^ Uint32(Uint32.max)).toEqual(Uint32(0));
     });
 
     test('bitshift left', () {

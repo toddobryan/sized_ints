@@ -1,6 +1,25 @@
-import 'dart:math';
+import 'dart:math' as math;
 
-class Uint8 {
+mixin UnsignedInt implements Comparable<UnsignedInt> {
+  @override
+  int compareTo(UnsignedInt other) => toBigInt().compareTo(other.toBigInt());
+
+  BigInt toBigInt();
+
+  @override
+  bool operator ==(Object other) => 
+    other is UnsignedInt && compareTo(other) == 0;
+
+  bool operator <(UnsignedInt other) => compareTo(other) < 0;
+  
+  bool operator <=(UnsignedInt other) => compareTo(other) <= 0;
+
+  bool operator >(UnsignedInt other) => compareTo(other) > 0;
+
+  bool operator >=(UnsignedInt other) => compareTo(other) >= 0;
+}
+
+class Uint8 with UnsignedInt {
   Uint8(this.value) {
     if (value < 0 || value > 255) {
       throw ArgumentError('value must be between 0 and 255, given: $value');
@@ -10,6 +29,9 @@ class Uint8 {
   int value;
   static int max = 0xFF;
   static int bitSize = 8;
+
+  @override
+  BigInt toBigInt() => BigInt.from(value);
 
   @override
   String toString() => '${value}u8';
@@ -145,7 +167,18 @@ class Uint32 {
 
   Uint32 operator -(Uint32 other) => Uint32((value - other.value) & max);
 
-  Uint32 operator *(Uint32 other) => Uint32((value * other.value) & max);
+  Uint32 operator *(Uint32 other) {
+    if (value.bitLength + other.value.bitLength < 50) {
+      // safe to just multiply on native and js platforms
+      return Uint32((value * other.value) % (max + 1));
+    } else {
+      // defer to BigInt
+      return Uint32(
+        ((BigInt.from(value) * BigInt.from(other.value)) % BigInt.from(max + 1))
+            .toInt(),
+      );
+    }
+  }
 
   Uint32 operator ~/(Uint32 other) => Uint32(value ~/ other.value);
 
@@ -186,27 +219,30 @@ class Uint32 {
 }
 
 class Uint64 {
-  Uint64(this.upper, this.lower) {
-    if (upper < 0 || upper > Uint32.max || lower < 0 || lower > Uint32.max) {
+  Uint64(this.upper, this.lower);
+
+  factory Uint64.fromInts(int u, int l) {
+    if (u < 0 || u > Uint32.max || l < 0 || l > Uint32.max) {
       throw ArgumentError(
-        'upper and lower must be between 0 and 4294967295, given: '
-        '$upper, $lower',
+        'u and l must be between 0 and 4294967295, given: '
+        '$u, $l',
       );
     }
+    return Uint64(Uint32(u), Uint32(l));
   }
 
   factory Uint64.fromInt(int value) {
     if (value < 0) {
       throw ArgumentError('value must be non-negative, given: $value');
-    } else if (value > (1 << 50)) {
+    } else if (value > (math.pow(2, 50))) {
       throw ArgumentError(
-        'use the Uint64(upper, lower) constructor for values above '
+        'use the Uint64(Uint32, Uint32) constructor for values above '
         '2 to the 50th to avoid platform differences',
       );
     }
-    int upper = value > (Uint32.max + 1) ? value ~/ (Uint32.max + 1) : 0;
+    int upper = value ~/ (Uint32.max + 1);
     int lower = value % (Uint32.max + 1);
-    return Uint64(upper, lower);
+    return Uint64(Uint32(upper), Uint32(lower));
   }
 
   factory Uint64.fromString(String value) {
@@ -222,29 +258,31 @@ class Uint64 {
       );
     }
     return Uint64(
-      (bi ~/ upperRightMostAsBigInt).toInt(),
-      (bi % upperRightMostAsBigInt).toInt(),
+      Uint32((bi ~/ upperRightMostAsBigInt).toInt()),
+      Uint32((bi % upperRightMostAsBigInt).toInt()),
     );
   }
 
-  int upper;
-  int lower;
+  Uint32 upper;
+  Uint32 lower;
+  static Uint32 maxUint32 = Uint32(0xFF_FF_FF_FF);
   static int bitSize = 64;
   static int upperRightmostCol = Uint32.max + 1;
   static BigInt upperRightMostAsBigInt = BigInt.from(upperRightmostCol);
-  static Uint64 max = Uint64(0xFF_FF_FF_FF, 0xFF_FF_FF_FF);
+  static Uint64 max = Uint64(maxUint32, maxUint32);
   static BigInt maxAsBigInt = BigInt.parse('0xFFFFFFFFFFFFFFFF');
   static BigInt zeroAsBigInt = BigInt.from(0);
 
-  (int, int) get values => (upper, lower);
+  (Uint32, Uint32) get values => (upper, lower);
 
   @override
   String toString() {
-    if (upper == 0) {
-      return '${lower}u64';
+    if (upper.value == 0) {
+      return '${lower.value}u64';
     } else {
       BigInt bi =
-          BigInt.from(upper) * upperRightMostAsBigInt + BigInt.from(lower);
+          BigInt.from(upper.value) * upperRightMostAsBigInt +
+          BigInt.from(lower.value);
       return '${bi}u64';
     }
   }
@@ -253,23 +291,19 @@ class Uint64 {
   bool operator ==(Object other) => other is Uint64 && values == other.values;
 
   Uint64 operator +(Uint64 other) {
-    int lowerSum = lower + other.lower;
-    int lowerCarry = lowerSum > pow(2, 32) ? 1 : 0;
-    int lowerMod = lowerSum % Uint32.max;
-    int upperSum = upper + other.upper + lowerCarry;
-    int upperCarry = upperSum > pow(2, 32) ? 1 : 0;
-    int upperMod = (upperSum + upperCarry) % Uint32.max;
-    return Uint64(upperMod, lowerMod);
+    int lowerSum = lower.value + other.lower.value;
+    int lowerCarry = lowerSum ~/ upperRightmostCol;
+    int lowerMod = lowerSum % upperRightmostCol;
+    int upperSum = upper.value + other.upper.value + lowerCarry;
+    int upperCarry = upperSum ~/ upperRightmostCol;
+    int upperMod = (upperSum + upperCarry) % upperRightmostCol;
+    return Uint64(Uint32(upperMod), Uint32(lowerMod));
   }
 
-  Uint64 _andMax() {
-    return Uint64(
-      (upper + lower ~/ Uint32.max) % Uint32.max,
-      lower % Uint32.max,
-    );
+  Uint64 operator -(Uint64 other) {
+    Uint32 lowerDiff = lower - other.lower;
+    int lowerCarry = lowerDiff > lower ? 1 : 0;
   }
-
-  /*Uint64 operator -(Uint64 other) => Uint64((value - other.value) & max);
 
   Uint64 operator *(Uint64 other) => Uint64((value * other.value) & max);
 
@@ -309,4 +343,18 @@ class Uint64 {
 
   @override
   int get hashCode => Object.hash(upper, lower);
+}
+
+// should not be called with a bigger value for bits than 16 or could have
+// issues on js
+(int, int) _split(int value, int bits) {
+  int highFilter = -1 << bits;
+  int lowFilter = -1 >>> (32 - bits);
+  return ((value & highFilter) >>> (bits), value & lowFilter);
+}
+
+main() {
+  int x = 0xFEDC;
+  var (h, l) = _split(x, 8);
+  print('${h.toRadixString(16)} ${l.toRadixString(16)}');
 }
