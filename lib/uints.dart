@@ -7,11 +7,11 @@ mixin UnsignedInt implements Comparable<UnsignedInt> {
   BigInt toBigInt();
 
   @override
-  bool operator ==(Object other) => 
-    other is UnsignedInt && compareTo(other) == 0;
+  bool operator ==(Object other) =>
+      other is UnsignedInt && compareTo(other) == 0;
 
   bool operator <(UnsignedInt other) => compareTo(other) < 0;
-  
+
   bool operator <=(UnsignedInt other) => compareTo(other) <= 0;
 
   bool operator >(UnsignedInt other) => compareTo(other) > 0;
@@ -300,7 +300,7 @@ class Uint64 {
     return Uint64(Uint32(upperMod), Uint32(lowerMod));
   }
 
-  Uint64 operator -(Uint64 other) {
+  /*Uint64 operator -(Uint64 other) {
     Uint32 lowerDiff = lower - other.lower;
     int lowerCarry = lowerDiff > lower ? 1 : 0;
   }
@@ -351,10 +351,4 @@ class Uint64 {
   int highFilter = -1 << bits;
   int lowFilter = -1 >>> (32 - bits);
   return ((value & highFilter) >>> (bits), value & lowFilter);
-}
-
-main() {
-  int x = 0xFEDC;
-  var (h, l) = _split(x, 8);
-  print('${h.toRadixString(16)} ${l.toRadixString(16)}');
 }
