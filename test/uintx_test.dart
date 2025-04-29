@@ -46,9 +46,36 @@ void main() {
       ).toEqual(252);
     });
 
+    test('simple multiplication', () {
+      UintX a = UintX.fromInt(8, 13);
+      UintX b = UintX.fromInt(8, 17);
+      expect(a * b).toEqual(UintX.fromInt(8, 221));
+
+      expect(
+        UintX.fromInt(32, 65537) * UintX.fromInt(32, 65537),
+      ).toEqual(UintX.fromInt(32, 131073));
+    });
+
     test('multiplication', () {
-      // Random check against BigInt 
-    })
+      // Random check against BigInt
+      Random r = Random();
+      for (int i = 0; i < 100; i++) {
+        BigInt a = BigInt.from(r.nextInt(UintX.twoToThe32));
+        BigInt b = BigInt.from(r.nextInt(UintX.twoToThe32));
+        BigInt c = BigInt.from(r.nextInt(UintX.twoToThe32));
+        BigInt d = BigInt.from(r.nextInt(UintX.twoToThe32));
+        BigInt one = a + b;
+        BigInt two = c + d;
+        print('one: ${one.hex}, two: ${two.hex}');
+        int bits = max(one.bitLength, two.bitLength);
+        BigInt mod = BigInt.one << bits;
+        print('bits: $bits, mod: $mod');
+        UintX uone = UintX.fromBigInt(bits, one);
+        UintX utwo = UintX.fromBigInt(bits, two);
+        print('uone: ${uone.hex}, utwo: ${utwo.hex}');
+        expect((uone * utwo).toBigInt()).toEqual((one * two) % mod);
+      }
+    });
 
     test('negation', () {
       expect(-UintX.fromInt(4, 15)).toEqual(UintX.fromInt(4, 1));

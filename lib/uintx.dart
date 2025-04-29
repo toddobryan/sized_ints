@@ -111,6 +111,8 @@ class UintX {
   @override
   String toString() => toRadixString(10);
 
+  String get hex => toRadixString(16);
+
   @override
   bool operator ==(Object other) {
     if (other is! UintX || other.bits != bits) {
@@ -273,11 +275,15 @@ class UintX {
       int o = other.uint32List[i];
       var (high1, low1) = _split(t);
       var (high2, low2) = _split(o);
+      print('high1: ${high1.hex}, low1: ${low1.hex}');
+      print('high2: ${high2.hex}, low2: ${low2.hex}');
       int low = low1 * low2;
       int high = high1 * high2;
-      int mid = _multAbsOfDiff(low1, high1, high2, low2);
-      result[i] = (mid << 16) + low + carry;
-      carry = high + (result[i] % maxUint32);
+      int mid = (high1 + low1) * (low2 + high2) - low - high;
+      print('low: ${low.hex}, high: ${high.hex}, mid: ${mid.hex}');
+      result[i] = ((mid & 0xFFFF) << 16) + low + carry;
+      carry = high + (mid >>> 16) + (result[i] ~/ twoToThe32);
+      print('result[$i]: ${result[i].hex}, carry: ${carry.hex}');
     }
     result[0] = result[0] & zerothIntMask;
     return UintX(bits, result);
@@ -303,4 +309,23 @@ class UintX {
       return prod;
     }
   }
+}
+
+extension IntOp on int {
+  String get hex => toRadixString(16);
+}
+
+extension BigIntOp on BigInt {
+  String get hex => toRadixString(16);
+}
+
+void main() {
+  BigInt one = BigInt.parse('0x7095f8ca');
+  BigInt two = BigInt.parse('0x18abbfe8a');
+  int l1 = 0x78ca;
+  int h1 = 0x7095;
+  int l2 = 0xfe8a;
+  int h2 = 0x18abb;
+
+  print((one * two).hex);
 }
