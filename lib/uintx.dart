@@ -221,6 +221,8 @@ class UintX {
     return UintX(bits, result);
   }
 
+  // Arithmetic operators
+
   UintX operator +(UintX other) {
     _checkBits(other);
     Uint32List result = Uint32List(uint32List.length);
@@ -236,11 +238,69 @@ class UintX {
 
   UintX operator -(UintX other) {
     _checkBits(other);
-    Uint32List result = Uint32List(uint32List.length);
-    return this;
+    UintX max = this;
+    UintX min = other;
+    bool negate = false;
+    if (max < min) {
+      max = other;
+      min = this;
+      negate = true;
+    }
+    UintX result = -min + max;
+    if (negate) {
+      result = -result;
+    }
+    return result;
   }
 
   UintX operator -() {
     return ~this + UintX.fromInt(bits, 1);
+  }
+
+  UintX operator *(UintX other) {
+    _checkBits(other);
+    if (bitLength + other.bitLength < 32) {
+      Uint32List result = Uint32List.fromList([
+        uint32List[0] * other.uint32List[0],
+      ]);
+      result[0] = result[0] & zerothIntMask;
+      return UintX(bits, result);
+    }
+    Uint32List result = Uint32List(uint32List.length);
+    int carry = 0;
+    for (int i = uint32List.length - 1; i >= 0; i--) {
+      int t = uint32List[i];
+      int o = other.uint32List[i];
+      var (high1, low1) = _split(t);
+      var (high2, low2) = _split(o);
+      int low = low1 * low2;
+      int high = high1 * high2;
+      int mid = _multAbsOfDiff(low1, high1, high2, low2);
+      result[i] = (mid << 16) + low + carry;
+      carry = high + (result[i] % maxUint32);
+    }
+    result[0] = result[0] & zerothIntMask;
+    return UintX(bits, result);
+  }
+
+  (int, int) _split(int x) {
+    if (x > UintX.maxUint32) {
+      throw ArgumentError(
+        'do not call _split with value above 2^32 - 1, given: $x',
+      );
+    }
+    int low = x & 0xFFFF;
+    int high = x >>> 16;
+    return (high, low);
+  }
+
+  int _multAbsOfDiff(int x0, int x1, int y1, int y0) {
+    bool negate = x0 - x1 < 0 != y1 - y0 < 0;
+    int prod = (x0 - x1).abs() * (y1 - y0).abs();
+    if (negate) {
+      return -prod;
+    } else {
+      return prod;
+    }
   }
 }

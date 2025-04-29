@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:spec/spec.dart';
@@ -35,6 +36,19 @@ void main() {
             UintX.parse(63, '0x7000_0000_0000_0001'),
       ).toEqual(UintX.fromInt(63, 0));
     });
+
+    test('subtraction', () {
+      expect(
+        (UintX.fromInt(8, 255) - UintX.fromInt(8, 251)).toInt(),
+      ).toEqual(4);
+      expect(
+        (UintX.fromInt(8, 251) - UintX.fromInt(8, 255)).toInt(),
+      ).toEqual(252);
+    });
+
+    test('multiplication', () {
+      // Random check against BigInt 
+    })
 
     test('negation', () {
       expect(-UintX.fromInt(4, 15)).toEqual(UintX.fromInt(4, 1));

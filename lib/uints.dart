@@ -344,11 +344,3 @@ class Uint64 {
   @override
   int get hashCode => Object.hash(upper, lower);
 }
-
-// should not be called with a bigger value for bits than 16 or could have
-// issues on js
-(int, int) _split(int value, int bits) {
-  int highFilter = -1 << bits;
-  int lowFilter = -1 >>> (32 - bits);
-  return ((value & highFilter) >>> (bits), value & lowFilter);
-}
