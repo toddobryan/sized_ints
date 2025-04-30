@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
@@ -106,18 +107,6 @@ class UintX {
     }
   }
 
-  // Comparison methods
-
-  bool _compare(UintX other, bool Function(int, int) op) {
-    _checkBits(other);
-    for (int i = 0; i < uint32List.length; i++) {
-      if (op(uint32List[i], other.uint32List[i])) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   String toRadixString(int radix) => toBigInt().toRadixString(radix);
 
   @override
@@ -125,16 +114,38 @@ class UintX {
 
   String get hex => toRadixString(16);
 
+  // Comparison methods
+
   @override
   bool operator ==(Object other) {
     if (other is! UintX || other.bits != bits) {
       return false;
     }
-    return !_compare(other, (int t, int o) => t != o);
+    for (int i = 0; i < uint32List.length; i++) {
+      if (uint32List[i] != other.uint32List[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
   int get hashCode => Object.hash(bits, uint32List);
+
+  bool _compare(UintX other, bool Function(int, int) op) {
+    _checkBits(other);
+    for (int i = 0; i < uint32List.length; i++) {
+      if (op(uint32List[i], other.uint32List[i])) {
+        return true;
+      } else if (uint32List[i] == other.uint32List[i]) {
+        // continue
+      } else {
+        return false;
+      }
+    }
+    // they're equal
+    return false;
+  }
 
   bool operator <(UintX other) => _compare(other, (int t, int o) => t < o);
   bool operator >(UintX other) => _compare(other, (int t, int o) => t > o);
@@ -288,6 +299,33 @@ class UintX {
     }
     return result;
   }
+
+  /// Convert both to double (with possible loss of precision)
+  /// and divide
+  double operator /(UintX other) =>
+      toBigInt().toDouble() / other.toBigInt().toDouble();
+
+  UintX operator ~/(UintX other) {
+    _checkBits(other);
+    if (other.zero()) {
+      throw UnsupportedError('Integer division by zero');
+    }
+    if (other > this) {
+      return UintX.fromInt(bits, 0);
+    }
+    UintX dividend = this;
+    UintX quotient = UintX.fromInt(bits, 0);
+    UintX one = UintX.fromInt(bits, 1);
+    while (dividend > other) {
+      int count = 0;
+      while (count < bits && (other << (count + 1)) < dividend) {
+        count++;
+      }
+      dividend = dividend - (other << count);
+      quotient = quotient + (one << count);
+    }
+    return quotient;
+  }
 }
 
 extension IntOp on int {
@@ -296,4 +334,15 @@ extension IntOp on int {
 
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
+}
+
+void main() {
+  BigInt one = BigInt.parse('0x3063e10415d6b1036137f54');
+  BigInt two = BigInt.parse('0x1742122f2680be6cccbfd20');
+  int bits = max(one.bitLength, two.bitLength);
+  UintX uone = UintX.fromBigInt(bits, one);
+  UintX utwo = UintX.fromBigInt(bits, two);
+  print((one - two).hex);
+  print((uone - utwo).hex);
+  UintX div = uone ~/ utwo;
 }

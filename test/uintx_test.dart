@@ -5,6 +5,8 @@ import 'package:spec/spec.dart';
 import 'package:uints/uintx.dart';
 
 void main() {
+  Random r = Random();
+
   group('uintx', () {
     test('constructor', () {
       expect(UintX(8, Uint32List.fromList([255])).toInt()).toEqual(255);
@@ -19,6 +21,26 @@ void main() {
       expect(
         UintX(64, Uint32List.fromList([0x10203040, 0xFFFFFFFF])).bitLength,
       ).toEqual(61);
+    });
+
+    test('less than', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => u1 < u2,
+        (b1, b2) => b1 < b2,
+      );
+    });
+
+    test('greater than', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => u1 > u2,
+        (b1, b2) => b1 > b2,
+      );
     });
 
     test('addition', () {
@@ -57,27 +79,29 @@ void main() {
     });
 
     test('multiplication', () {
-      // Random check against BigInt
-      Random r = Random();
-      for (int i = 0; i < 100; i++) {
-        BigInt a = BigInt.from(r.nextInt(UintX.twoToThe32));
-        BigInt b = BigInt.from(r.nextInt(UintX.twoToThe32));
-        BigInt c = BigInt.from(r.nextInt(UintX.twoToThe32));
-        BigInt d = BigInt.from(r.nextInt(UintX.twoToThe32));
-        BigInt one = a + b;
-        BigInt two = c + d;
-        print('one: ${one.hex}, two: ${two.hex}');
-        int bits = max(one.bitLength, two.bitLength);
-        print('bits: $bits');
-        BigInt mod = BigInt.one << bits;
-        print('mod: ${mod.hex}');
-        print('bits: $bits, mod: $mod');
-        UintX uone = UintX.fromBigInt(bits, one);
-        UintX utwo = UintX.fromBigInt(bits, two);
-        print('uone: ${uone.hex}, utwo: ${utwo.hex}');
-        expect((uone * utwo).toBigInt()).toEqual((one * two) % mod);
-        print('\u2713');
-      }
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 * u2).toBigInt(),
+        (b1, b2) {
+          BigInt mod = BigInt.one << max(b1.bitLength, b2.bitLength);
+          return (b1 * b2) % mod;
+        },
+      );
+    });
+
+    test('int division', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 ~/ u2).toBigInt(),
+        (b1, b2) {
+          BigInt mod = BigInt.one << max(b1.bitLength, b2.bitLength);
+          return (b1 ~/ b2) % mod;
+        },
+      );
     });
 
     test('negation', () {
@@ -85,4 +109,39 @@ void main() {
       expect(-UintX.fromInt(8, 100)).toEqual(UintX.fromInt(8, 156));
     });
   });
+}
+
+void testAgainstRandomBigInts<T>(
+  int numRuns,
+  Random r,
+  BigInt Function() biCreator,
+  T Function(UintX, UintX) uintOp,
+  T Function(BigInt, BigInt) biOp,
+) {
+  for (int i = 0; i < numRuns; i++) {
+    BigInt one = biCreator();
+    BigInt two = biCreator();
+    print(' one: ${one.hex},  two: ${two.hex}');
+    int bits = max(one.bitLength, two.bitLength);
+    UintX uone = UintX.fromBigInt(bits, one);
+    UintX utwo = UintX.fromBigInt(bits, two);
+    print('uone: ${uone.hex}, utwo: ${utwo.hex}');
+    T check = uintOp(uone, utwo);
+    T expected = biOp(one, two);
+    print(' check: $check');
+    print('expect: $expected');
+    expect(uintOp(uone, utwo)).toEqual(biOp(one, two));
+  }
+}
+
+BigInt randomBigInt(Random r, int numInts, BigInt Function(BigInt, BigInt) op) {
+  List<BigInt> bigInts = List.generate(
+    numInts,
+    (i) => BigInt.from(r.nextInt(UintX.twoToThe32)),
+  );
+  BigInt result = bigInts[0];
+  for (int i = 1; i < bigInts.length; i++) {
+    result = op(result, bigInts[i]);
+  }
+  return result;
 }
