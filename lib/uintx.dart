@@ -16,7 +16,8 @@ class UintX {
     if (bits < value.bitLength) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
-    return UintX(bits, Uint32List.fromList([value]));
+    List<int> zeros = List.generate((bits / 32).ceil() - 1, (i) => 0);
+    return UintX(bits, Uint32List.fromList(zeros + [value]));
   }
 
   factory UintX.fromBigInt(int bits, BigInt value) {
@@ -67,6 +68,17 @@ class UintX {
     }
     return 0;
   }
+
+  bool nonZero() {
+    for (int i = 0; i < uint32List.length; i++) {
+      if (uint32List[i] != 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool zero() => !nonZero();
 
   int toInt() {
     if (bitLength > 31) {
@@ -231,8 +243,8 @@ class UintX {
     int carry = 0;
     for (int i = uint32List.length - 1; i >= 0; i--) {
       int sum = uint32List[i] + other.uint32List[i] + carry;
-      result[i] = sum & maxUint32;
-      carry = (sum ~/ 2) >> 31;
+      result[i] = sum % twoToThe32;
+      carry = sum ~/ twoToThe32;
     }
     result[0] = result[0] & zerothIntMask;
     return UintX(bits, result);
@@ -261,53 +273,20 @@ class UintX {
 
   UintX operator *(UintX other) {
     _checkBits(other);
-    if (bitLength + other.bitLength < 32) {
-      Uint32List result = Uint32List.fromList([
-        uint32List[0] * other.uint32List[0],
-      ]);
-      result[0] = result[0] & zerothIntMask;
-      return UintX(bits, result);
+    UintX result = UintX.fromInt(bits, 0);
+    if (zero() || other.zero()) {
+      return result;
     }
-    Uint32List result = Uint32List(uint32List.length);
-    int carry = 0;
-    for (int i = uint32List.length - 1; i >= 0; i--) {
-      int t = uint32List[i];
-      int o = other.uint32List[i];
-      var (high1, low1) = _split(t);
-      var (high2, low2) = _split(o);
-      print('high1: ${high1.hex}, low1: ${low1.hex}');
-      print('high2: ${high2.hex}, low2: ${low2.hex}');
-      int low = low1 * low2;
-      int high = high1 * high2;
-      int mid = (high1 + low1) * (low2 + high2) - low - high;
-      print('low: ${low.hex}, high: ${high.hex}, mid: ${mid.hex}');
-      result[i] = ((mid & 0xFFFF) << 16) + low + carry;
-      carry = high + (mid >>> 16) + (result[i] ~/ twoToThe32);
-      print('result[$i]: ${result[i].hex}, carry: ${carry.hex}');
+    UintX multiplicand = this;
+    int count = 0;
+    while (multiplicand.nonZero()) {
+      if (multiplicand.uint32List.last & 1 == 1) {
+        result = result + (other << count);
+      }
+      multiplicand = multiplicand >> 1;
+      count++;
     }
-    result[0] = result[0] & zerothIntMask;
-    return UintX(bits, result);
-  }
-
-  (int, int) _split(int x) {
-    if (x > UintX.maxUint32) {
-      throw ArgumentError(
-        'do not call _split with value above 2^32 - 1, given: $x',
-      );
-    }
-    int low = x & 0xFFFF;
-    int high = x >>> 16;
-    return (high, low);
-  }
-
-  int _multAbsOfDiff(int x0, int x1, int y1, int y0) {
-    bool negate = x0 - x1 < 0 != y1 - y0 < 0;
-    int prod = (x0 - x1).abs() * (y1 - y0).abs();
-    if (negate) {
-      return -prod;
-    } else {
-      return prod;
-    }
+    return result;
   }
 }
 
@@ -317,15 +296,4 @@ extension IntOp on int {
 
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
-}
-
-void main() {
-  BigInt one = BigInt.parse('0x7095f8ca');
-  BigInt two = BigInt.parse('0x18abbfe8a');
-  int l1 = 0x78ca;
-  int h1 = 0x7095;
-  int l2 = 0xfe8a;
-  int h2 = 0x18abb;
-
-  print((one * two).hex);
 }

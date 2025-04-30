@@ -68,12 +68,15 @@ void main() {
         BigInt two = c + d;
         print('one: ${one.hex}, two: ${two.hex}');
         int bits = max(one.bitLength, two.bitLength);
+        print('bits: $bits');
         BigInt mod = BigInt.one << bits;
+        print('mod: ${mod.hex}');
         print('bits: $bits, mod: $mod');
         UintX uone = UintX.fromBigInt(bits, one);
         UintX utwo = UintX.fromBigInt(bits, two);
         print('uone: ${uone.hex}, utwo: ${utwo.hex}');
         expect((uone * utwo).toBigInt()).toEqual((one * two) % mod);
+        print('\u2713');
       }
     });
 
