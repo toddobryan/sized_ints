@@ -313,6 +313,7 @@ class UintX {
     if (other > this) {
       return UintX.fromInt(bits, 0);
     }
+    print("$hex ~/ ${other.hex}");
     UintX dividend = this;
     UintX quotient = UintX.fromInt(bits, 0);
     UintX one = UintX.fromInt(bits, 1);
@@ -323,6 +324,7 @@ class UintX {
       }
       dividend = dividend - (other << count);
       quotient = quotient + (one << count);
+      print('count: $count\nquotient: $quotient\ndividend: $dividend');
     }
     return quotient;
   }

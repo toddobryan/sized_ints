@@ -128,6 +128,7 @@ void testAgainstRandomBigInts<T>(
     print('uone: ${uone.hex}, utwo: ${utwo.hex}');
     T check = uintOp(uone, utwo);
     T expected = biOp(one, two);
+    print('bits: $bits');
     print(' check: $check');
     print('expect: $expected');
     expect(uintOp(uone, utwo)).toEqual(biOp(one, two));
