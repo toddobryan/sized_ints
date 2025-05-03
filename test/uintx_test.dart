@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:sized_ints/uintx.dart';
 import 'package:spec/spec.dart';
-import 'package:uints/uintx.dart';
 
 void main() {
   Random r = Random();

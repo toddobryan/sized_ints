@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:uints/intx.dart';
+import 'package:sized_ints/intx.dart';
 import 'package:spec/spec.dart';
 
 void main() {

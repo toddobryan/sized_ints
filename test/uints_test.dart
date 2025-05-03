@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:uints/uints.dart';
+import 'package:sized_ints/uints.dart';
 import 'package:spec/spec.dart';
 
 void main() {
