@@ -104,11 +104,55 @@ void main() {
       );
     });
 
+    test('int mod', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 % u2).toBigInt(),
+        (b1, b2) => b1 % b2,
+      );
+    });
+
+    test('double division', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => u1 / u2,
+        (b1, b2) => b1 / b2,
+      );
+    });
+
     test('negation', () {
       expect(-UintX.fromInt(4, 15)).toEqual(UintX.fromInt(4, 1));
       expect(-UintX.fromInt(8, 100)).toEqual(UintX.fromInt(8, 156));
     });
+
+    test('UintX', () {
+      for (int i = 0; i <= 255; i++) {
+        for (int j = 0; j <= 255; j++) {
+          Uint8 a = Uint8(i);
+          Uint8 b = Uint8(j);
+          expect((a + b).toInt()).toEqual((i + j) % 256);
+          expect((a - b).toInt()).toEqual((i - j) % 256);
+          expect((a * b).toInt()).toEqual((i * j) % 256);
+          if (j != 0) {
+            expect((a ~/ b).toInt()).toEqual((i ~/ j) % 256);
+            expect(a / b).toEqual(i / j);
+            expect((a % b).toInt()).toEqual(i % j);
+          }
+          expect((a | b).toInt()).toEqual((i | j) % 256);
+          expect((a & b).toInt()).toEqual((i & j) % 256);
+          expect((a ^ b).toInt()).toEqual((i ^ j) % 256);
+          expect((~a).toInt()).toEqual(~i % 256);
+          expect((-a).toInt()).toEqual((256 - i) % 256);
+        }
+      }
+    });
   });
+
+  // TODO: Uint16, Uint32, Uint64, exceptions
 }
 
 void testAgainstRandomBigInts<T>(
@@ -121,17 +165,18 @@ void testAgainstRandomBigInts<T>(
   for (int i = 0; i < numRuns; i++) {
     BigInt one = biCreator();
     BigInt two = biCreator();
-    print(' one: ${one.hex},  two: ${two.hex}');
+    //print(' one: ${one.hex},  two: ${two.hex}');
     int bits = max(one.bitLength, two.bitLength);
     UintX uone = UintX.fromBigInt(bits, one);
     UintX utwo = UintX.fromBigInt(bits, two);
-    print('uone: ${uone.hex}, utwo: ${utwo.hex}');
+    //print('uone: ${uone.hex}, utwo: ${utwo.hex}');
     T check = uintOp(uone, utwo);
     T expected = biOp(one, two);
-    print('bits: $bits');
-    print(' check: $check');
-    print('expect: $expected');
+    //print('bits: $bits');
+    //print(' check: $check');
+    //print('expect: $expected');
     expect(uintOp(uone, utwo)).toEqual(biOp(one, two));
+    //print('\u2713');
   }
 }
 

@@ -1,11 +1,27 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
-/// operations. Values are store as lists of 32-bit non-negative ints,
+/// operations. Values are stored as lists of 32-bit non-negative ints,
 /// since those are supported on both native and web
 class UintX {
-  UintX(this.bits, this.uint32List);
+  UintX(this.bits, this.uint32List) {
+    int expectedLength = (bits / _bitSize).ceil();
+    if (expectedLength != uint32List.length) {
+      throw ArgumentError(
+        'IntList32 argument must have length of $expectedLength, '
+        'given: ${uint32List.length}',
+      );
+    } else if (uint32List.first.bitLength > _modBitSize(bits)) {
+      throw ArgumentError(
+        'Significtant bits in first element must be <= ${_modBitSize(bits)}, '
+        'given: ${uint32List.first.bitLength}',
+      );
+    } else if (uint32List.any((elt) => elt.bitLength > _bitSize)) {
+      throw ArgumentError(
+        'Max bit length of all elements in list must be <= $_bitSize',
+      );
+    }
+  }
 
   factory UintX.fromInt(int bits, int value) {
     if (value < 0 || value >= maxUint32) {
@@ -17,7 +33,7 @@ class UintX {
     if (bits < value.bitLength) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
-    List<int> zeros = List.generate((bits / 32).ceil() - 1, (i) => 0);
+    List<int> zeros = List.generate((bits / _bitSize).ceil() - 1, (i) => 0);
     return UintX(bits, Uint32List.fromList(zeros + [value]));
   }
 
@@ -28,7 +44,7 @@ class UintX {
         'value must be in range [0, 2^$bits-1], given: $value',
       );
     }
-    Uint32List l = Uint32List((bits / listIntSize).ceil());
+    Uint32List l = Uint32List((bits / _bitSize).ceil());
     for (int i = l.length - 1; i >= 0; i--) {
       l[i] = (value % twoToThe32AsBigInt).toInt();
       value = value ~/ twoToThe32AsBigInt;
@@ -41,30 +57,41 @@ class UintX {
     return UintX.fromBigInt(bits, BigInt.parse(s.replaceAll('_', '')));
   }
 
-  static int maxUint32 = 0xFFFFFFFF;
-  static int twoToThe32 = 0x100000000;
-  static BigInt twoToThe32AsBigInt = BigInt.from(0x100000000);
-  static int listIntSize = 32;
+  static final int maxUint32 = 0xFFFFFFFF;
+  static final int twoToThe32 = 0x100000000;
+  static final BigInt twoToThe32AsBigInt = BigInt.from(0x100000000);
+  // The number of bits used in each element. Limited to 32 since that
+  // is consistent for both native and web.
+  static final int _bitSize = 32;
 
+  // number of (rightmost) bits that "count" in the most significant Uint32.
+  static int _modBitSize(int bits) =>
+      (bits % _bitSize == 0) ? _bitSize : bits % _bitSize;
+
+  /// Number of bits of precision
   int bits;
+
+  /// List of bits representing this number, most to least significant order
   Uint32List uint32List;
 
+  // cache the value after the first time
   int? _zerothIntMask;
 
+  /// A bitset of 1s to apply to the most significant uint32.
   int get zerothIntMask {
     if (_zerothIntMask == null) {
-      int modBits = bits % listIntSize;
-      int numBits = modBits == 0 ? listIntSize : modBits;
-      _zerothIntMask = numBits == listIntSize ? maxUint32 : (1 << numBits) - 1;
+      int numBits = _modBitSize(bits);
+      _zerothIntMask = numBits == _bitSize ? maxUint32 : (1 << numBits) - 1;
     }
     return _zerothIntMask!;
   }
 
+  /// Number of actual bits used in this UintX. Must be <= bits.
   int get bitLength {
     for (int i = 0; i < uint32List.length; i++) {
       int bl = uint32List[i].bitLength;
       if (bl > 0) {
-        return bl + listIntSize * (uint32List.length - 1);
+        return bl + _bitSize * (uint32List.length - 1);
       }
     }
     return 0;
@@ -82,7 +109,7 @@ class UintX {
   bool zero() => !nonZero();
 
   int toInt() {
-    if (bitLength > 31) {
+    if (bitLength > 32) {
       throw RangeError(
         'not safe to return $this as int, use toBigInt() instead',
       );
@@ -107,11 +134,14 @@ class UintX {
     }
   }
 
+  /// Converts to BigInt and calls toRadixString(radix)
   String toRadixString(int radix) => toBigInt().toRadixString(radix);
 
+  /// Calls toRadixString(10)
   @override
   String toString() => toRadixString(10);
 
+  /// Shortcut for toRadixString(16)
   String get hex => toRadixString(16);
 
   // Comparison methods
@@ -181,10 +211,10 @@ class UintX {
       return UintX(bits, Uint32List(uint32List.length));
     }
     UintX result = this;
-    for (int i = 0; i < n ~/ listIntSize; i++) {
+    for (int i = 0; i < n ~/ _bitSize; i++) {
       result = result._shiftLeft32Bits();
     }
-    result = result._shiftLeftLessThan32Bits(n % listIntSize);
+    result = result._shiftLeftLessThan32Bits(n % _bitSize);
     return result;
   }
 
@@ -193,10 +223,10 @@ class UintX {
       return UintX(bits, Uint32List(uint32List.length));
     }
     UintX result = this;
-    for (int i = 0; i < n ~/ listIntSize; i++) {
+    for (int i = 0; i < n ~/ _bitSize; i++) {
       result = result._shiftRightUnsigned32Bits();
     }
-    result = result._shiftRightLessThan32Bits(n % listIntSize);
+    result = result._shiftRightLessThan32Bits(n % _bitSize);
     return result;
   }
 
@@ -305,28 +335,58 @@ class UintX {
   double operator /(UintX other) =>
       toBigInt().toDouble() / other.toBigInt().toDouble();
 
-  UintX operator ~/(UintX other) {
+  UintX operator ~/(UintX other) => _divAndMod(other).$1;
+
+  UintX operator %(UintX other) => _divAndMod(other).$2;
+
+  (UintX, UintX) _divAndMod(UintX other) {
     _checkBits(other);
     if (other.zero()) {
       throw UnsupportedError('Integer division by zero');
     }
     if (other > this) {
-      return UintX.fromInt(bits, 0);
+      return (UintX.fromInt(bits, 0), this);
     }
-    print("$hex ~/ ${other.hex}");
     UintX dividend = this;
     UintX quotient = UintX.fromInt(bits, 0);
     UintX one = UintX.fromInt(bits, 1);
-    while (dividend > other) {
+    while (dividend.bitLength >= other.bitLength && dividend >= other) {
       int count = 0;
-      while (count < bits && (other << (count + 1)) < dividend) {
+      int bitDiff = dividend.bitLength - other.bitLength;
+      while (count < bitDiff && (other << (count + 1)) < dividend) {
         count++;
       }
       dividend = dividend - (other << count);
       quotient = quotient + (one << count);
-      print('count: $count\nquotient: $quotient\ndividend: $dividend');
     }
-    return quotient;
+    return (quotient, dividend);
+  }
+}
+
+class Uint8 extends UintX {
+  Uint8(int value) : super(8, Uint32List.fromList([value]));
+}
+
+class Uint16 extends UintX {
+  Uint16(int value) : super(16, Uint32List.fromList([value]));
+}
+
+class Uint32 extends UintX {
+  Uint32(int value) : super(32, Uint32List.fromList([value]));
+}
+
+class Uint64 extends UintX {
+  Uint64(int upper, int lower) : super(64, Uint32List.fromList([upper, lower]));
+
+  factory Uint64.fromBigInt(BigInt value) {
+    if (value.bitLength > 64) {
+      throw ArgumentError(
+        'value must have bitLength <= 64, given: ${value.bitLength}',
+      );
+    }
+    int upper = (value ~/ UintX.twoToThe32AsBigInt).toInt();
+    int lower = (value % UintX.twoToThe32AsBigInt).toInt();
+    return Uint64(upper, lower);
   }
 }
 
@@ -336,15 +396,4 @@ extension IntOp on int {
 
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
-}
-
-void main() {
-  BigInt one = BigInt.parse('0x3063e10415d6b1036137f54');
-  BigInt two = BigInt.parse('0x1742122f2680be6cccbfd20');
-  int bits = max(one.bitLength, two.bitLength);
-  UintX uone = UintX.fromBigInt(bits, one);
-  UintX utwo = UintX.fromBigInt(bits, two);
-  print((one - two).hex);
-  print((uone - utwo).hex);
-  UintX div = uone ~/ utwo;
 }
