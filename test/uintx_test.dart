@@ -165,18 +165,10 @@ void testAgainstRandomBigInts<T>(
   for (int i = 0; i < numRuns; i++) {
     BigInt one = biCreator();
     BigInt two = biCreator();
-    //print(' one: ${one.hex},  two: ${two.hex}');
     int bits = max(one.bitLength, two.bitLength);
     UintX uone = UintX.fromBigInt(bits, one);
     UintX utwo = UintX.fromBigInt(bits, two);
-    //print('uone: ${uone.hex}, utwo: ${utwo.hex}');
-    T check = uintOp(uone, utwo);
-    T expected = biOp(one, two);
-    //print('bits: $bits');
-    //print(' check: $check');
-    //print('expect: $expected');
     expect(uintOp(uone, utwo)).toEqual(biOp(one, two));
-    //print('\u2713');
   }
 }
 
