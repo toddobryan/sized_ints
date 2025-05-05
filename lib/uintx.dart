@@ -359,7 +359,7 @@ class UintX {
 }
 
 class Uint8 extends UintX {
-  Uint8.fromInt(int value) : super.fromInt(8, value);
+  Uint8.fromInt(int value) : super(8, Uint32List.fromList([value]));
 }
 
 class Uint16 extends UintX {
@@ -367,13 +367,44 @@ class Uint16 extends UintX {
 }
 
 class Uint32 extends UintX {
-  Uint32.fromInt(int value) : super(32, Uint32List.fromList([value]));
+  Uint32._(Uint32List list) : super(32, list);
+
+  factory Uint32.fromInt(int value) {
+    if (value < 0) {
+      throw ArgumentError('value must be non-negative, given: $value');
+    } else if (value.bitLength > 32) {
+      throw ArgumentError(
+        'use Uint64.fromBigInt() or Uint64(upper, lower) for value with bitLength > 32',
+      );
+    }
+    return Uint32._(Uint32List.fromList([value]));
+  }
 
   static final int max = 0xFFFFFFFF;
 }
 
 class Uint64 extends UintX {
-  Uint64(int upper, int lower) : super(64, Uint32List.fromList([upper, lower]));
+  Uint64._(Uint32List list) : super(64, list);
+
+  factory Uint64(int upper, int lower) {
+    if (!upper.safeUnsigned || !lower.safeUnsigned) {
+      return Uint64._(Uint32List.fromList([upper, lower]));
+    } else {
+
+    }
+    
+    super(64, Uint32List.fromList([upper, lower]));
+
+  factory Uint64.fromInt(int value) {
+    if (value < 0) {
+      throw ArgumentError('value must be non-negative, given: $value');
+    } else if (value.bitLength > 32) {
+      throw ArgumentError(
+        'use Uint64.fromBigInt() or Uint64(upper, lower) for value with bitLength > 32',
+      );
+    }
+    return Uint64(0, value);
+  }
 
   factory Uint64.fromBigInt(BigInt value) {
     if (value.bitLength > 64) {
@@ -385,16 +416,26 @@ class Uint64 extends UintX {
     int lower = (value % UintX.twoToThe32AsBigInt).toInt();
     return Uint64(upper, lower);
   }
+
+  factory Uint64.parse(String value) {
+    UintX v = UintX.parse(64, value);
+    return Uint64(v.uint32List[0], v.uint32List[1]);
+  }
+
+  static Uint64 max = Uint64(0xFFFFFFFF, 0xFFFFFFFF);
+
+  (int, int) get values => (uint32List[0], uint32List[1]);
 }
 
 extension IntOp on int {
   String get hex => toRadixString(16);
+
+  bool get safeCrossPlatform => bitLength <= 32;
+
+  bool get safeUnsigned => safeCrossPlatform && this >= 0;
 }
 
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
 }
 
-void main() {
-  Uint8 x = Uint8(-5);
-}

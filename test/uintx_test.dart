@@ -132,8 +132,8 @@ void main() {
     test('UintX', () {
       for (int i = 0; i <= 255; i++) {
         for (int j = 0; j <= 255; j++) {
-          Uint8 a = Uint8(i);
-          Uint8 b = Uint8(j);
+          Uint8 a = Uint8.fromInt(i);
+          Uint8 b = Uint8.fromInt(j);
           expect((a + b).toInt()).toEqual((i + j) % 256);
           expect((a - b).toInt()).toEqual((i - j) % 256);
           expect((a * b).toInt()).toEqual((i * j) % 256);
