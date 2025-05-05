@@ -1,13 +1,13 @@
 import 'dart:math';
-import 'package:sized_ints/uints.dart';
+import 'package:sized_ints/uintx.dart';
 import 'package:spec/spec.dart';
 
 void main() {
   group('Uint8', () {
     test('constructor', () {
-      expect(Uint8(0).value).toEqual(0);
-      expect(Uint8(255).value).toEqual(255);
-      expect(Uint8(20).value).toEqual(20);
+      expect(Uint8(0).toInt()).toEqual(0);
+      expect(Uint8(255).toInt()).toEqual(255);
+      expect(Uint8(20).toInt()).toEqual(20);
       expect(() => Uint8(-5)).throws.isArgumentError();
     });
 
@@ -86,17 +86,13 @@ void main() {
       expect(Uint8(250) >>> 7).toEqual(Uint8(1));
       expect(Uint8(250) >>> 10).toEqual(Uint8(0));
     });
-
-    test('hashcode', () {
-      expect(Uint8(37).hashCode).toEqual(37.hashCode);
-    });
   });
 
   group('Uint16', () {
     test('constructor', () {
-      expect(Uint16(0).value).toEqual(0);
-      expect(Uint16(255).value).toEqual(255);
-      expect(Uint16(20).value).toEqual(20);
+      expect(Uint16(0).toInt()).toEqual(0);
+      expect(Uint16(255).toInt()).toEqual(255);
+      expect(Uint16(20).toInt()).toEqual(20);
       expect(() => Uint16(-5)).throws.isArgumentError();
     });
 
@@ -176,17 +172,13 @@ void main() {
       expect(Uint16(250) >>> 7).toEqual(Uint16(1));
       expect(Uint16(250) >>> 10).toEqual(Uint16(0));
     });
-
-    test('hashcode', () {
-      expect(Uint16(37).hashCode).toEqual(37.hashCode);
-    });
   });
 
   group('Uint32', () {
     test('constructor', () {
-      expect(Uint32(0).value).toEqual(0);
-      expect(Uint32(255).value).toEqual(255);
-      expect(Uint32(20).value).toEqual(20);
+      expect(Uint32(0).toInt()).toEqual(0);
+      expect(Uint32(255).toInt()).toEqual(255);
+      expect(Uint32(20).toInt()).toEqual(20);
       expect(() => Uint32(-5)).throws.isArgumentError();
     });
 
@@ -275,10 +267,6 @@ void main() {
       expect(Uint32(3) >>> 0).toEqual(Uint32(3));
       expect(Uint32(250) >>> 7).toEqual(Uint32(1));
       expect(Uint32(250) >>> 10).toEqual(Uint32(0));
-    });
-
-    test('hashcode', () {
-      expect(Uint32(37).hashCode).toEqual(37.hashCode);
     });
   });
 

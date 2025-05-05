@@ -65,8 +65,10 @@ class UintX {
   static final int _bitSize = 32;
 
   // number of (rightmost) bits that "count" in the most significant Uint32.
-  static int _modBitSize(int bits) =>
-      (bits % _bitSize == 0) ? _bitSize : bits % _bitSize;
+  static int _modBitSize(int bits) {
+    int mod = bits % _bitSize;
+    return mod == 0 ? _bitSize : mod;
+  }
 
   /// Number of bits of precision
   int bits;
@@ -91,20 +93,13 @@ class UintX {
     for (int i = 0; i < uint32List.length; i++) {
       int bl = uint32List[i].bitLength;
       if (bl > 0) {
-        return bl + _bitSize * (uint32List.length - 1);
+        return bl + _bitSize * (uint32List.length - i - 1);
       }
     }
     return 0;
   }
 
-  bool nonZero() {
-    for (int i = 0; i < uint32List.length; i++) {
-      if (uint32List[i] != 0) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool nonZero() => uint32List.any((x) => x != 0);
 
   bool zero() => !nonZero();
 
@@ -135,7 +130,7 @@ class UintX {
   }
 
   /// Converts to BigInt and calls toRadixString(radix)
-  String toRadixString(int radix) => toBigInt().toRadixString(radix);
+  String toRadixString(int radix) => '${toBigInt().toRadixString(radix)}u$bits';
 
   /// Calls toRadixString(10)
   @override
@@ -364,15 +359,17 @@ class UintX {
 }
 
 class Uint8 extends UintX {
-  Uint8(int value) : super(8, Uint32List.fromList([value]));
+  Uint8.fromInt(int value) : super.fromInt(8, value);
 }
 
 class Uint16 extends UintX {
-  Uint16(int value) : super(16, Uint32List.fromList([value]));
+  Uint16.fromInt(int value) : super(16, Uint32List.fromList([value]));
 }
 
 class Uint32 extends UintX {
-  Uint32(int value) : super(32, Uint32List.fromList([value]));
+  Uint32.fromInt(int value) : super(32, Uint32List.fromList([value]));
+
+  static final int max = 0xFFFFFFFF;
 }
 
 class Uint64 extends UintX {
@@ -396,4 +393,8 @@ extension IntOp on int {
 
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
+}
+
+void main() {
+  Uint8 x = Uint8(-5);
 }
