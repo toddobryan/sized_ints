@@ -5,15 +5,24 @@ import 'package:sized_ints/uintx.dart';
 /// Value is stored as a big-endian int. If the value is negative,
 /// uint32List.first is padded with 1s.
 class IntX {
-  IntX(this.bits, this.uint32List);
+  IntX._(this.bits, this.uint32List);
+
+  factory IntX.fromInt(int bits, int value) {
+    if (value < minInt32 || value > maxInt32) {
+      throw ArgumentError(
+        'value must be in range [-2^31, 2^31-1] to work on native and web, '
+        'given: $value Use fromBigInt() instead',
+      );
+    }
+  }
 
   static final int _bitSize = 32;
 
   final int bits;
   final Uint32List uint32List;
 
-  static final int maxUint32 = 0xFFFFFFFF;
-  static final int twoToThe32 = 0x100000000;
+  static final int maxInt32 = 0x7FFFFFFF;
+  static final int minInt32 = -0x80000000;
   static final BigInt twoToThe32AsBigInt = BigInt.from(twoToThe32);
 
   static int _modBitSize(int bits) {

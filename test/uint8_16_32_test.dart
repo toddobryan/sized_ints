@@ -377,7 +377,7 @@ void main() {
     test('hashCode', () {
       expect(
         Uint64(3, 5).hashCode,
-      ).toEqual(Object.hash(64, Uint32List.fromList([3, 5])));
+      ).toEqual(Object.hash(64, Object.hashAll(Uint32List.fromList([3, 5]))));
     });
   });
 }

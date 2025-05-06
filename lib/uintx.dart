@@ -155,7 +155,7 @@ class UintX {
   }
 
   @override
-  int get hashCode => Object.hash(bits, uint32List);
+  int get hashCode => Object.hash(bits, Object.hashAll(uint32List.toList()));
 
   bool _compare(UintX other, bool Function(int, int) op) {
     _checkBits(other);
@@ -387,13 +387,14 @@ class Uint64 extends UintX {
   Uint64._(Uint32List list) : super(64, list);
 
   factory Uint64(int upper, int lower) {
-    if (!upper.safeUnsigned || !lower.safeUnsigned) {
-      return Uint64._(Uint32List.fromList([upper, lower]));
+    if (!upper.safeUnsigned) {
+      throw ArgumentError('upper must be in range [0, 2^32-1], given: $upper');
+    } else if (!lower.safeUnsigned) {
+      throw ArgumentError('lower must be in range [0, 2^32-1], given: $lower');
     } else {
-
+      return Uint64._(Uint32List.fromList([upper, lower]));
     }
-    
-    super(64, Uint32List.fromList([upper, lower]));
+  }
 
   factory Uint64.fromInt(int value) {
     if (value < 0) {
@@ -438,4 +439,3 @@ extension IntOp on int {
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
 }
-
