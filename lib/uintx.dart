@@ -1,55 +1,44 @@
 import 'dart:typed_data';
 
+import 'package:sized_ints/sized_int.dart';
+
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
 /// operations. Values are stored as lists of 32-bit non-negative ints,
 /// since those are supported on both native and web
-class UintX {
-  UintX(this.bits, this.uint32List) {
-    int expectedLength = (bits / _bitSize).ceil();
-    if (expectedLength != uint32List.length) {
-      throw ArgumentError(
-        'IntList32 argument must have length of $expectedLength, '
-        'given: ${uint32List.length}',
-      );
-    } else if (uint32List.first.bitLength > _modBitSize(bits)) {
-      throw ArgumentError(
-        'Significtant bits in first element must be <= ${_modBitSize(bits)}, '
-        'given: ${uint32List.first.bitLength}',
-      );
-    } else if (uint32List.any((elt) => elt.bitLength > _bitSize)) {
-      throw ArgumentError(
-        'Max bit length of all elements in list must be <= $_bitSize',
-      );
-    }
-  }
+class UintX extends SizedInt {
+  UintX(super.bits, super.uints);
 
   factory UintX.fromInt(int bits, int value) {
-    if (value < 0 || value >= maxUint32) {
+    if (value < 0 || value >= SizedInt.maxUint32) {
       throw ArgumentError('value must be in range [0, 2^32-1], given: $value');
-    }
-    if (bits < 1) {
-      throw ArgumentError('bits must be 1 one or greater, given: $bits');
     }
     if (bits < value.bitLength) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
-    List<int> zeros = List.generate((bits / _bitSize).ceil() - 1, (i) => 0);
-    return UintX(bits, Uint32List.fromList(zeros + [value]));
+    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    int index = list.length - 1;
+    while (value > 0) {
+      list[index] = value % SizedInt.elementMod;
+      value = value >>> SizedInt.bitsPerListElement;
+      index--;
+    }
+    return UintX(bits, list);
   }
 
   factory UintX.fromBigInt(int bits, BigInt value) {
-    BigInt max = (BigInt.one << bits) - BigInt.one;
-    if (value < BigInt.zero || value > max) {
+    if (value < BigInt.zero || value > maxUnsignedAsBigInt(bits)) {
       throw ArgumentError(
         'value must be in range [0, 2^$bits-1], given: $value',
       );
     }
-    Uint32List l = Uint32List((bits / _bitSize).ceil());
-    for (int i = l.length - 1; i >= 0; i--) {
-      l[i] = (value % twoToThe32AsBigInt).toInt();
-      value = value ~/ twoToThe32AsBigInt;
+    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    int index = list.length - 1;
+    while (value > BigInt.zero) {
+      list[index] = (value % SizedInt.elementModAsBigInt).toInt();
+      value = value >> SizedInt.bitsPerListElement;
+      index--;
     }
-    return UintX(bits, l);
+    return UintX(bits, list);
   }
 
   factory UintX.parse(int bits, String s) {
@@ -57,87 +46,11 @@ class UintX {
     return UintX.fromBigInt(bits, BigInt.parse(s.replaceAll('_', '')));
   }
 
-  static final int maxUint32 = 0xFFFFFFFF;
-  static final int twoToThe32 = 0x100000000;
-  static final BigInt twoToThe32AsBigInt = BigInt.from(0x100000000);
-  // The number of bits used in each element. Limited to 32 since that
-  // is consistent for both native and web.
-  static final int _bitSize = 32;
-
-  // number of (rightmost) bits that "count" in the most significant Uint32.
-  static int _modBitSize(int bits) {
-    int mod = bits % _bitSize;
-    return mod == 0 ? _bitSize : mod;
-  }
-
-  /// Number of bits of precision
-  int bits;
-
-  /// List of bits representing this number, most to least significant order
-  Uint32List uint32List;
-
-  // cache the value after the first time
-  int? _zerothIntMask;
-
-  /// A bitset of 1s to apply to the most significant uint32.
-  int get zerothIntMask {
-    if (_zerothIntMask == null) {
-      int numBits = _modBitSize(bits);
-      _zerothIntMask = numBits == _bitSize ? maxUint32 : (1 << numBits) - 1;
-    }
-    return _zerothIntMask!;
-  }
-
-  /// Number of actual bits used in this UintX. Must be <= bits.
-  int get bitLength {
-    for (int i = 0; i < uint32List.length; i++) {
-      int bl = uint32List[i].bitLength;
-      if (bl > 0) {
-        return bl + _bitSize * (uint32List.length - i - 1);
-      }
-    }
-    return 0;
-  }
-
-  bool nonZero() => uint32List.any((x) => x != 0);
-
-  bool zero() => !nonZero();
-
-  int toInt() {
-    if (bitLength > 32) {
-      throw RangeError(
-        'not safe to return $this as int, use toBigInt() instead',
-      );
-    }
-    return uint32List.last;
-  }
-
-  BigInt toBigInt() {
-    BigInt value = BigInt.from(uint32List[0]);
-    for (int i = 1; i < uint32List.length; i++) {
-      value = (value * twoToThe32AsBigInt) + BigInt.from(uint32List[i]);
-    }
-    return value;
-  }
-
-  void _checkBits(UintX other) {
-    if (bits != other.bits) {
-      throw ArgumentError(
-        'receiver and argument must have same number of bits,'
-        'given: $bits and ${other.bits}',
-      );
-    }
-  }
-
-  /// Converts to BigInt and calls toRadixString(radix)
-  String toRadixString(int radix) => '${toBigInt().toRadixString(radix)}u$bits';
-
-  /// Calls toRadixString(10)
   @override
-  String toString() => toRadixString(10);
+  int toInt() => toUnsignedInt();
 
-  /// Shortcut for toRadixString(16)
-  String get hex => toRadixString(16);
+  @override
+  String get suffix => 'u$bits';
 
   // Comparison methods
 
@@ -146,8 +59,8 @@ class UintX {
     if (other is! UintX || other.bits != bits) {
       return false;
     }
-    for (int i = 0; i < uint32List.length; i++) {
-      if (uint32List[i] != other.uint32List[i]) {
+    for (int i = 0; i < uints.length; i++) {
+      if (uints[i] != other.uints[i]) {
         return false;
       }
     }
@@ -155,14 +68,14 @@ class UintX {
   }
 
   @override
-  int get hashCode => Object.hash(bits, Object.hashAll(uint32List.toList()));
+  int get hashCode => Object.hash(bits, Object.hashAll(uints.toList()));
 
   bool _compare(UintX other, bool Function(int, int) op) {
-    _checkBits(other);
-    for (int i = 0; i < uint32List.length; i++) {
-      if (op(uint32List[i], other.uint32List[i])) {
+    checkBitsAreSame(other);
+    for (int i = 0; i < uints.length; i++) {
+      if (op(uints[i], other.uints[i])) {
         return true;
-      } else if (uint32List[i] == other.uint32List[i]) {
+      } else if (uints[i] == other.uints[i]) {
         // continue
       } else {
         return false;
@@ -179,19 +92,23 @@ class UintX {
 
   // Bit-wise operations
   UintX operator ~() {
-    Uint32List result = Uint32List(uint32List.length);
-    for (int i = 0; i < uint32List.length; i++) {
-      result[i] = ~uint32List[i];
+    TypedDataList<int> result = SizedInt.newList(uints.length);
+    for (int i = 0; i < uints.length; i++) {
+      result[i] = ~uints[i];
     }
-    result[0] = result[0] & zerothIntMask;
+    extendZerothElement(result);
     return UintX(bits, result);
   }
 
+  void extendZerothElement(TypedDataList<int> list) {
+    list[0] = list[0] & (1 << modBitSize(bits));
+  }
+
   UintX _binaryBinOp(UintX other, int Function(int, int) op) {
-    _checkBits(other);
-    Uint32List result = Uint32List(uint32List.length);
-    for (int i = 0; i < uint32List.length; i++) {
-      result[i] = op(uint32List[i], other.uint32List[i]);
+    checkBitsAreSame(other);
+    TypedDataList<int> result = SizedInt.newList(uints.length);
+    for (int i = 0; i < uints.length; i++) {
+      result[i] = op(uints[i], other.uints[i]);
     }
     return UintX(bits, result);
   }
@@ -203,70 +120,76 @@ class UintX {
   // Bit-shift operations
   UintX operator <<(int n) {
     if (n > bits) {
-      return UintX(bits, Uint32List(uint32List.length));
+      return UintX(bits, SizedInt.newList(uints.length));
     }
     UintX result = this;
-    for (int i = 0; i < n ~/ _bitSize; i++) {
-      result = result._shiftLeft32Bits();
+    for (int i = 0; i < n ~/ SizedInt.bitsPerListElement; i++) {
+      result = result._shiftElementsLeft();
     }
-    result = result._shiftLeftLessThan32Bits(n % _bitSize);
+    result = result._shiftBitsLeft(n % SizedInt.bitsPerListElement);
     return result;
   }
 
   UintX operator >>>(int n) {
     if (n > bits) {
-      return UintX(bits, Uint32List(uint32List.length));
+      return UintX(bits, SizedInt.newList(uints.length));
     }
     UintX result = this;
-    for (int i = 0; i < n ~/ _bitSize; i++) {
-      result = result._shiftRightUnsigned32Bits();
+    for (int i = 0; i < n ~/ SizedInt.bitsPerListElement; i++) {
+      result = result._shiftElementsRight();
     }
-    result = result._shiftRightLessThan32Bits(n % _bitSize);
+    result = result._shiftBitsRight(n % SizedInt.bitsPerListElement);
     return result;
   }
 
   UintX operator >>(int n) => this >>> n; // for unsigned, >> is the same as >>>
 
-  UintX _shiftLeft32Bits() {
-    Uint32List result = Uint32List(uint32List.length);
-    for (int i = 0; i < uint32List.length - 1; i++) {
-      result[i] = uint32List[i + 1];
+  UintX _shiftElementsLeft() {
+    TypedDataList<int> result = SizedInt.newList(uints.length);
+    for (int i = 0; i < uints.length - 1; i++) {
+      result[i] = uints[i + 1];
     }
-    result[0] = result[0] & zerothIntMask;
+    extendZerothElement(result);
     return UintX(bits, result);
   }
 
-  UintX _shiftLeftLessThan32Bits(int n) {
-    if (n < 0 || n >= 32) {
-      throw ArgumentError('n must be in range [0, 31], given: $n');
+  UintX _shiftBitsLeft(int n) {
+    if (n < 0 || n >= SizedInt.bitsPerListElement) {
+      throw ArgumentError(
+        'n must be in range [0, ${SizedInt.bitsPerListElement - 1}], '
+        'given: $n',
+      );
     }
-    Uint32List result = Uint32List(uint32List.length);
+    TypedDataList<int> result = SizedInt.newList(uints.length);
     int carry = 0;
-    for (int i = uint32List.length - 1; i >= 0; i--) {
-      result[i] = (uint32List[i] << n) + carry;
-      carry = uint32List[i] >>> (32 - n);
+    for (int i = uints.length - 1; i >= 0; i--) {
+      result[i] = (uints[i] << n) + carry;
+      carry = uints[i] >>> (SizedInt.bitsPerListElement - n);
     }
-    result[0] = result[0] & zerothIntMask;
+    extendZerothElement(result);
     return UintX(bits, result);
   }
 
-  UintX _shiftRightUnsigned32Bits() {
-    Uint32List result = Uint32List(uint32List.length);
-    for (int i = uint32List.length - 1; i > 0; i--) {
-      result[i] = uint32List[i - 1];
+  UintX _shiftElementsRight() {
+    TypedDataList<int> result = SizedInt.newList(uints.length);
+    for (int i = uints.length - 1; i > 0; i--) {
+      result[i] = uints[i - 1];
     }
     return UintX(bits, result);
   }
 
-  UintX _shiftRightLessThan32Bits(int n) {
-    if (n < 0 || n > 31) {
-      throw ArgumentError('n must be in range [0, 31], given: $n');
+  UintX _shiftBitsRight(int n) {
+    if (n < 0 || n >= SizedInt.bitsPerListElement) {
+      throw ArgumentError(
+        'n must be in range [0, ${SizedInt.bitsPerListElement - 1}], '
+        'given: $n',
+      );
     }
-    Uint32List result = Uint32List(uint32List.length);
+    TypedDataList<int> result = SizedInt.newList(uints.length);
     int carryMask = 0;
-    for (int i = 0; i < uint32List.length; i++) {
-      result[i] = (uint32List[i] >> n) | carryMask;
-      carryMask = uint32List[i] << (32 - n);
+    for (int i = 0; i < uints.length; i++) {
+      result[i] = (uints[i] >> n) | carryMask;
+      carryMask = uints[i] << (SizedInt.bitsPerListElement - n);
     }
     return UintX(bits, result);
   }
@@ -274,20 +197,20 @@ class UintX {
   // Arithmetic operators
 
   UintX operator +(UintX other) {
-    _checkBits(other);
-    Uint32List result = Uint32List(uint32List.length);
+    checkBitsAreSame(other);
+    TypedDataList<int> result = SizedInt.newList(uints.length);
     int carry = 0;
-    for (int i = uint32List.length - 1; i >= 0; i--) {
-      int sum = uint32List[i] + other.uint32List[i] + carry;
-      result[i] = sum % twoToThe32;
-      carry = sum ~/ twoToThe32;
+    for (int i = uints.length - 1; i >= 0; i--) {
+      int sum = uints[i] + other.uints[i] + carry;
+      result[i] = sum % SizedInt.elementMod;
+      carry = sum ~/ SizedInt.elementMod;
     }
-    result[0] = result[0] & zerothIntMask;
+    extendZerothElement(result);
     return UintX(bits, result);
   }
 
   UintX operator -(UintX other) {
-    _checkBits(other);
+    checkBitsAreSame(other);
     UintX max = this;
     UintX min = other;
     bool negate = false;
@@ -308,15 +231,15 @@ class UintX {
   }
 
   UintX operator *(UintX other) {
-    _checkBits(other);
+    checkBitsAreSame(other);
     UintX result = UintX.fromInt(bits, 0);
-    if (zero() || other.zero()) {
+    if (isZero || other.isZero) {
       return result;
     }
     UintX multiplicand = this;
     int count = 0;
-    while (multiplicand.nonZero()) {
-      if (multiplicand.uint32List.last & 1 == 1) {
+    while (multiplicand.isNonZero) {
+      if (multiplicand.uints.last & 1 == 1) {
         result = result + (other << count);
       }
       multiplicand = multiplicand >> 1;
@@ -335,8 +258,8 @@ class UintX {
   UintX operator %(UintX other) => _divAndMod(other).$2;
 
   (UintX, UintX) _divAndMod(UintX other) {
-    _checkBits(other);
-    if (other.zero()) {
+    checkBitsAreSame(other);
+    if (other.isZero) {
       throw UnsupportedError('Integer division by zero');
     }
     if (other > this) {
@@ -359,15 +282,15 @@ class UintX {
 }
 
 class Uint8 extends UintX {
-  Uint8.fromInt(int value) : super(8, Uint32List.fromList([value]));
+  Uint8.fromInt(int value) : super(8, SizedInt.listFromInts([value]));
 }
 
 class Uint16 extends UintX {
-  Uint16.fromInt(int value) : super(16, Uint32List.fromList([value]));
+  Uint16.fromInt(int value) : super(16, SizedInt.listFromInts([value]));
 }
 
 class Uint32 extends UintX {
-  Uint32._(Uint32List list) : super(32, list);
+  Uint32._(TypedDataList<int> list) : super(32, list);
 
   factory Uint32.fromInt(int value) {
     if (value < 0) {
@@ -377,14 +300,14 @@ class Uint32 extends UintX {
         'use Uint64.fromBigInt() or Uint64(upper, lower) for value with bitLength > 32',
       );
     }
-    return Uint32._(Uint32List.fromList([value]));
+    return Uint32._(SizedInt.listFromInts([value]));
   }
 
   static final int max = 0xFFFFFFFF;
 }
 
 class Uint64 extends UintX {
-  Uint64._(Uint32List list) : super(64, list);
+  Uint64._(TypedDataList<int> list) : super(64, list);
 
   factory Uint64(int upper, int lower) {
     if (!upper.safeUnsigned) {
@@ -392,7 +315,7 @@ class Uint64 extends UintX {
     } else if (!lower.safeUnsigned) {
       throw ArgumentError('lower must be in range [0, 2^32-1], given: $lower');
     } else {
-      return Uint64._(Uint32List.fromList([upper, lower]));
+      return Uint64.fromBigInt((BigInt.from(upper) << 32) + BigInt.from(lower));
     }
   }
 
@@ -413,19 +336,19 @@ class Uint64 extends UintX {
         'value must have bitLength <= 64, given: ${value.bitLength}',
       );
     }
-    int upper = (value ~/ UintX.twoToThe32AsBigInt).toInt();
-    int lower = (value % UintX.twoToThe32AsBigInt).toInt();
+    int upper = (value ~/ (BigInt.one << 32)).toInt();
+    int lower = (value % (BigInt.one << 32)).toInt();
     return Uint64(upper, lower);
   }
 
   factory Uint64.parse(String value) {
     UintX v = UintX.parse(64, value);
-    return Uint64(v.uint32List[0], v.uint32List[1]);
+    return Uint64(v.uints[0], v.uints[1]);
   }
 
   static Uint64 max = Uint64(0xFFFFFFFF, 0xFFFFFFFF);
 
-  (int, int) get values => (uint32List[0], uint32List[1]);
+  (int, int) get values => (uints[0], uints[1]);
 }
 
 extension IntOp on int {

@@ -371,7 +371,7 @@ void main() {
 
     test('toString', () {
       expect(Uint64.max.toString()).toEqual('18446744073709551615u64');
-      expect(Uint64(1, 0).toString()).toEqual('${UintX.twoToThe32}u64');
+      expect(Uint64(1, 0).toString()).toEqual('${0x100000000}u64');
     });
 
     test('hashCode', () {

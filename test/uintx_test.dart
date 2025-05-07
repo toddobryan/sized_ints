@@ -9,18 +9,15 @@ void main() {
 
   group('uintx', () {
     test('constructor', () {
-      expect(UintX(8, Uint32List.fromList([255])).toInt()).toEqual(255);
-      expect(UintX(16, Uint32List.fromList([0xABCD])).toInt()).toEqual(0xABCD);
-      expect(
-        UintX(64, Uint32List.fromList([0x10203040, 0xFFFFFFFF])).toBigInt(),
-      ).toEqual(BigInt.parse('0x10203040FFFFFFFF'));
-    });
-
-    test('bitLength', () {
-      expect(UintX(8, Uint32List.fromList([8])).bitLength).toEqual(4);
-      expect(
-        UintX(64, Uint32List.fromList([0x10203040, 0xFFFFFFFF])).bitLength,
-      ).toEqual(61);
+      UintX twoFiftyFive = UintX.fromInt(8, 255);
+      expect(twoFiftyFive.toInt()).toEqual(255);
+      expect(twoFiftyFive.bitLength).toEqual(8);
+      UintX abcd = UintX.fromInt(16, 0xABCD);
+      expect(abcd.toInt()).toEqual(0xABCD);
+      expect(abcd.bitLength).toEqual(16);
+      UintX bi = UintX.fromBigInt(64, BigInt.parse('0x10203040FFFFFFFF'));
+      expect(bi.toBigInt()).toEqual(BigInt.parse('0x10203040FFFFFFFF'));
+      expect(bi.bitLength).toEqual(61);
     });
 
     test('less than', () {
@@ -175,7 +172,7 @@ void testAgainstRandomBigInts<T>(
 BigInt randomBigInt(Random r, int numInts, BigInt Function(BigInt, BigInt) op) {
   List<BigInt> bigInts = List.generate(
     numInts,
-    (i) => BigInt.from(r.nextInt(UintX.twoToThe32)),
+    (i) => BigInt.from(r.nextInt(0x100000000)),
   );
   BigInt result = bigInts[0];
   for (int i = 1; i < bigInts.length; i++) {
