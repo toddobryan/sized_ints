@@ -1,6 +1,9 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:sized_ints/intx.dart';
+import 'package:sized_ints/uintx.dart';
+
 // number of (rightmost) bits that "count" in the most significant Uint32.
 int modBitSize(int bits) {
   int mod = bits % SizedInt.bitsPerListElement;
@@ -35,7 +38,7 @@ abstract class SizedInt {
     int expectedLength = expectedUintListLength(bits);
     if (expectedLength != uints.length) {
       throw ArgumentError(
-        'IntList32 argument must have length of $expectedLength, '
+        'uints argument must have length of $expectedLength, '
         'given: ${uints.length}',
       );
     } else if (uints.first.bitLength > modBitSize(bits)) {
@@ -75,16 +78,18 @@ abstract class SizedInt {
 
   int? _bitLength;
   int get bitLength {
-    if (_bitLength == null) {
-      for (int i = 0; i < uints.length; i++) {
-        int bl = uints[i].bitLength;
-        if (bl > 0) {
-          _bitLength = bl + (bitsPerListElement * (uints.length - i - 1));
-        }
-      }
-      _bitLength = 0;
-    }
+    _bitLength ??= _calculateBitLength();
     return _bitLength!;
+  }
+
+  int _calculateBitLength() {
+    for (int i = 0; i < uints.length; i++) {
+      int bl = uints[i].bitLength;
+      if (bl > 0) {
+        return bl + (bitsPerListElement * (uints.length - i - 1));
+      }
+    }
+    return 0;
   }
 
   bool? _isNonZero;
@@ -113,7 +118,7 @@ abstract class SizedInt {
     );
     int value = uints[lastIntIndex];
     for (int i = lastIntIndex + 1; i < uints.length; i++) {
-      value = value << SizedInt.bitsPerListElement + uints[i];
+      value = (value << SizedInt.bitsPerListElement) + uints[i];
     }
     return value;
   }
@@ -141,11 +146,40 @@ abstract class SizedInt {
         'receiver and argument must have same number of bits,'
         'given: $bits and ${other.bits}',
       );
-    } else if (runtimeType != other.runtimeType) {
+    } else if (this is IntX && other is UintX ||
+        other is IntX && this is UintX) {
       throw ArgumentError(
-        'receiver and argument must be same time, given: '
+        'receiver and argument must be same type, given: '
         'receiver: $runtimeType, argument: ${other.runtimeType}',
       );
     }
+  }
+
+  static TypedDataList<int> unsignedIntToList(int bits, int value) {
+    if (value < 0 || value >= SizedInt.maxUint32) {
+      throw ArgumentError('value must be in range [0, 2^32-1], given: $value');
+    }
+    if (bits < value.bitLength) {
+      throw ArgumentError('value $value will not fit in $bits bits');
+    }
+    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    int index = list.length - 1;
+    while (value > 0) {
+      list[index] = value % SizedInt.elementMod;
+      value = value >>> SizedInt.bitsPerListElement;
+      index--;
+    }
+    return list;
+  }
+
+  static TypedDataList<int> unsignedBigIntToList(int bits, BigInt value) {
+    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    int index = list.length - 1;
+    while (value > BigInt.zero) {
+      list[index] = (value % SizedInt.elementModAsBigInt).toInt();
+      value = value >> SizedInt.bitsPerListElement;
+      index--;
+    }
+    return list;
   }
 }

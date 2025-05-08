@@ -8,22 +8,8 @@ import 'package:sized_ints/sized_int.dart';
 class UintX extends SizedInt {
   UintX(super.bits, super.uints);
 
-  factory UintX.fromInt(int bits, int value) {
-    if (value < 0 || value >= SizedInt.maxUint32) {
-      throw ArgumentError('value must be in range [0, 2^32-1], given: $value');
-    }
-    if (bits < value.bitLength) {
-      throw ArgumentError('value $value will not fit in $bits bits');
-    }
-    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
-    int index = list.length - 1;
-    while (value > 0) {
-      list[index] = value % SizedInt.elementMod;
-      value = value >>> SizedInt.bitsPerListElement;
-      index--;
-    }
-    return UintX(bits, list);
-  }
+  UintX.fromInt(int bits, int value)
+    : super(bits, SizedInt.unsignedIntToList(bits, value));
 
   factory UintX.fromBigInt(int bits, BigInt value) {
     if (value < BigInt.zero || value > maxUnsignedAsBigInt(bits)) {
@@ -31,13 +17,7 @@ class UintX extends SizedInt {
         'value must be in range [0, 2^$bits-1], given: $value',
       );
     }
-    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
-    int index = list.length - 1;
-    while (value > BigInt.zero) {
-      list[index] = (value % SizedInt.elementModAsBigInt).toInt();
-      value = value >> SizedInt.bitsPerListElement;
-      index--;
-    }
+    TypedDataList<int> list = SizedInt.unsignedBigIntToList(bits, value);
     return UintX(bits, list);
   }
 
@@ -101,7 +81,7 @@ class UintX extends SizedInt {
   }
 
   void extendZerothElement(TypedDataList<int> list) {
-    list[0] = list[0] & (1 << modBitSize(bits));
+    list[0] = list[0] & ((1 << modBitSize(bits)) - 1);
   }
 
   UintX _binaryBinOp(UintX other, int Function(int, int) op) {
@@ -282,71 +262,24 @@ class UintX extends SizedInt {
 }
 
 class Uint8 extends UintX {
-  Uint8.fromInt(int value) : super(8, SizedInt.listFromInts([value]));
+  Uint8.fromInt(int value) : super(8, SizedInt.unsignedIntToList(8, value));
 }
 
 class Uint16 extends UintX {
-  Uint16.fromInt(int value) : super(16, SizedInt.listFromInts([value]));
+  Uint16.fromInt(int value) : super(16, SizedInt.unsignedIntToList(16, value));
 }
 
 class Uint32 extends UintX {
-  Uint32._(TypedDataList<int> list) : super(32, list);
-
-  factory Uint32.fromInt(int value) {
-    if (value < 0) {
-      throw ArgumentError('value must be non-negative, given: $value');
-    } else if (value.bitLength > 32) {
-      throw ArgumentError(
-        'use Uint64.fromBigInt() or Uint64(upper, lower) for value with bitLength > 32',
-      );
-    }
-    return Uint32._(SizedInt.listFromInts([value]));
-  }
-
-  static final int max = 0xFFFFFFFF;
+  Uint32.fromInt(int value) : super(32, SizedInt.unsignedIntToList(32, value));
 }
 
 class Uint64 extends UintX {
-  Uint64._(TypedDataList<int> list) : super(64, list);
+  Uint64.fromInt(int value) : super(64, SizedInt.unsignedIntToList(64, value));
 
-  factory Uint64(int upper, int lower) {
-    if (!upper.safeUnsigned) {
-      throw ArgumentError('upper must be in range [0, 2^32-1], given: $upper');
-    } else if (!lower.safeUnsigned) {
-      throw ArgumentError('lower must be in range [0, 2^32-1], given: $lower');
-    } else {
-      return Uint64.fromBigInt((BigInt.from(upper) << 32) + BigInt.from(lower));
-    }
-  }
+  Uint64.fromBigInt(BigInt value)
+    : super(64, SizedInt.unsignedBigIntToList(64, value));
 
-  factory Uint64.fromInt(int value) {
-    if (value < 0) {
-      throw ArgumentError('value must be non-negative, given: $value');
-    } else if (value.bitLength > 32) {
-      throw ArgumentError(
-        'use Uint64.fromBigInt() or Uint64(upper, lower) for value with bitLength > 32',
-      );
-    }
-    return Uint64(0, value);
-  }
-
-  factory Uint64.fromBigInt(BigInt value) {
-    if (value.bitLength > 64) {
-      throw ArgumentError(
-        'value must have bitLength <= 64, given: ${value.bitLength}',
-      );
-    }
-    int upper = (value ~/ (BigInt.one << 32)).toInt();
-    int lower = (value % (BigInt.one << 32)).toInt();
-    return Uint64(upper, lower);
-  }
-
-  factory Uint64.parse(String value) {
-    UintX v = UintX.parse(64, value);
-    return Uint64(v.uints[0], v.uints[1]);
-  }
-
-  static Uint64 max = Uint64(0xFFFFFFFF, 0xFFFFFFFF);
+  Uint64.parse(String value) : super.fromBigInt(64, BigInt.parse(value));
 
   (int, int) get values => (uints[0], uints[1]);
 }
@@ -361,4 +294,12 @@ extension IntOp on int {
 
 extension BigIntOp on BigInt {
   String get hex => toRadixString(16);
+}
+
+void main() {
+  UintX eight = UintX.fromInt(8, 100);
+  print(eight.uints[0]);
+  UintX x = eight + eight;
+  print(x.uints[0]);
+  print(x.toInt());
 }
