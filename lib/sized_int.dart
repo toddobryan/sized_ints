@@ -30,6 +30,9 @@ BigInt maxUnsignedAsBigInt(int bits) {
   return BigInt.one << bits;
 }
 
+BigInt parseWithUnderscores(String value) =>
+    BigInt.parse(value.replaceAll('_', ''));
+
 abstract class SizedInt {
   SizedInt(this.bits, this.uints) {
     if (bits < 1) {
@@ -41,12 +44,12 @@ abstract class SizedInt {
         'uints argument must have length of $expectedLength, '
         'given: ${uints.length}',
       );
-    } else if (uints.first.bitLength > modBitSize(bits)) {
+    } /*else if (uints.first.bitLength > modBitSize(bits)) {
       throw ArgumentError(
         'Significtant bits in first element must be <= ${modBitSize(bits)}, '
         'given: ${uints.first.bitLength}',
       );
-    } else if (uints.any((elt) => elt.bitLength > bitsPerListElement)) {
+    }*/ else if (uints.any((elt) => elt.bitLength > bitsPerListElement)) {
       throw ArgumentError(
         'Max bit length of all elements in list must '
         'be <= $bitsPerListElement',
@@ -78,11 +81,11 @@ abstract class SizedInt {
 
   int? _bitLength;
   int get bitLength {
-    _bitLength ??= _calculateBitLength();
+    _bitLength ??= calculateBitLength();
     return _bitLength!;
   }
 
-  int _calculateBitLength() {
+  int calculateBitLength() {
     for (int i = 0; i < uints.length; i++) {
       int bl = uints[i].bitLength;
       if (bl > 0) {
@@ -95,6 +98,8 @@ abstract class SizedInt {
   bool? _isNonZero;
   bool get isNonZero => _isNonZero ??= uints.any((x) => x != 0);
   bool get isZero => !isNonZero;
+
+  String get bin => uints.map((x) => x.toRadixString(2)).join('_');
 
   int toInt();
 
@@ -146,8 +151,7 @@ abstract class SizedInt {
         'receiver and argument must have same number of bits,'
         'given: $bits and ${other.bits}',
       );
-    } else if (this is IntX && other is UintX ||
-        other is IntX && this is UintX) {
+    } else if (this is IntX && other is Uint || other is IntX && this is Uint) {
       throw ArgumentError(
         'receiver and argument must be same type, given: '
         'receiver: $runtimeType, argument: ${other.runtimeType}',
@@ -156,7 +160,7 @@ abstract class SizedInt {
   }
 
   static TypedDataList<int> unsignedIntToList(int bits, int value) {
-    if (value < 0 || value >= SizedInt.maxUint32) {
+    if (value < 0 || value > SizedInt.maxUint32) {
       throw ArgumentError('value must be in range [0, 2^32-1], given: $value');
     }
     if (bits < value.bitLength) {
@@ -173,6 +177,12 @@ abstract class SizedInt {
   }
 
   static TypedDataList<int> unsignedBigIntToList(int bits, BigInt value) {
+    if (value < BigInt.zero) {
+      throw ArgumentError('value must be >= 0, given: $value');
+    }
+    if (value.bitLength > bits) {
+      throw ArgumentError('value can not be represented in $bits bits');
+    }
     TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
     int index = list.length - 1;
     while (value > BigInt.zero) {
@@ -180,6 +190,79 @@ abstract class SizedInt {
       value = value >> SizedInt.bitsPerListElement;
       index--;
     }
+    return list;
+  }
+
+  static TypedDataList<int> signedIntToList(int bits, int value) {
+    if (value < Int32.minAsInt || value > Int32.maxAsInt) {
+      throw ArgumentError(
+        'value must be in range [-2^31, 2^31-1], given: $value',
+      );
+    }
+    if (bits < value.bitLength) {
+      throw ArgumentError('value $value will not fit in $bits bits');
+    }
+    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    int absValue = value.abs();
+    int index = list.length - 1;
+    while (absValue > 0) {
+      list[index] = absValue % SizedInt.elementMod;
+      absValue = absValue >>> SizedInt.bitsPerListElement;
+      index--;
+    }
+    if (value < 0) {
+      for (int i = list.length - 1; i >= 0; i--) {
+        list[i] = ~list[i] + 1;
+      }
+      list = extendZerothElementNegative(bits, list);
+    } else {
+      list = extendZerothElementPositive(bits, list);
+    }
+    return list;
+  }
+
+  static TypedDataList<int> signedBigIntToList(int bits, BigInt value) {
+    int valueBitLength = value.bitLength + (value < BigInt.zero ? 1 : 0);
+    if (valueBitLength > bits) {
+      throw ArgumentError('value $value will not fit in $bits bits');
+    }
+    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    BigInt absValue = value.abs();
+    int index = list.length - 1;
+    while (absValue > BigInt.zero) {
+      list[index] = (absValue % SizedInt.elementModAsBigInt).toInt();
+      absValue = absValue >> SizedInt.bitsPerListElement;
+      index--;
+    }
+    if (value < BigInt.zero) {
+      for (int i = list.length - 1; i >= 0; i--) {
+        list[i] = ~list[i] + 1;
+      }
+      list = extendZerothElementNegative(bits, list);
+    } else {
+      list = extendZerothElementPositive(bits, list);
+    }
+    return list;
+  }
+
+  // a bunch of zeros followed by modBitSize(bits) - 1 ones.
+  static int positiveMask(int bits) => (1 << modBitSize(bits)) - 1;
+
+  static int negativeMask(int bits) => (~positiveMask(bits)).toSigned(32);
+
+  static TypedDataList<int> extendZerothElementPositive(
+    int bits,
+    TypedDataList<int> list,
+  ) {
+    list[0] = list[0] & positiveMask(bits);
+    return list;
+  }
+
+  static TypedDataList<int> extendZerothElementNegative(
+    int bits,
+    TypedDataList<int> list,
+  ) {
+    list[0] = list[0] | negativeMask(bits);
     return list;
   }
 }

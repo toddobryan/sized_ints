@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:sized_ints/uintx.dart';
 import 'package:spec/spec.dart';
 
@@ -240,33 +239,27 @@ void main() {
       expect(
         Uint32.fromInt(32) + Uint32.fromInt(64),
       ).toEqual(Uint32.fromInt(96));
-      expect(
-        Uint32.fromInt(Uint32.max) + Uint32.fromInt(1),
-      ).toEqual(Uint32.fromInt(0));
+      expect(Uint32.max + Uint32.fromInt(1)).toEqual(Uint32.fromInt(0));
       expect(
         Uint32.fromInt(2_200_000_000) + Uint32.fromInt(2_200_000_000),
       ).toEqual(Uint32.fromInt(105_032_704));
     });
 
     test('subtract', () {
+      expect(Uint32.fromInt(0) - Uint32.fromInt(1)).toEqual(Uint32.max);
       expect(
-        Uint32.fromInt(0) - Uint32.fromInt(1),
-      ).toEqual(Uint32.fromInt(Uint32.max));
-      expect(
-        Uint32.fromInt(Uint32.max) - Uint32.fromInt(pow(2, 31) as int),
+        Uint32.max - Uint32.fromInt(pow(2, 31) as int),
       ).toEqual(Uint32.fromInt((pow(2, 31) as int) - 1));
       expect(
         Uint32.fromInt(20) - Uint32.fromInt(50),
-      ).toEqual(Uint32.fromInt(Uint32.max - 29));
+      ).toEqual(Uint32.fromInt(Uint32.maxAsInt - 29));
     });
 
     test('multiply', () {
       expect(
         Uint32.fromInt(0) * Uint32.fromInt(255),
       ).toEqual(Uint32.fromInt(0));
-      expect(
-        Uint32.fromInt(Uint32.max) * Uint32.fromInt(Uint32.max),
-      ).toEqual(Uint32.fromInt(1));
+      expect(Uint32.max * Uint32.max).toEqual(Uint32.fromInt(1));
       expect(
         Uint32.fromInt(pow(2, 31) as int) * Uint32.fromInt(pow(2, 31) as int),
       ).toEqual(Uint32.fromInt(0));
@@ -295,8 +288,10 @@ void main() {
     });
 
     test('bit complement', () {
-      expect(~Uint32.fromInt(255)).toEqual(Uint32.fromInt(Uint32.max - 255));
-      expect(~Uint32.fromInt(3)).toEqual(Uint32.fromInt(Uint32.max - 3));
+      expect(
+        ~Uint32.fromInt(255),
+      ).toEqual(Uint32.fromInt(Uint32.maxAsInt - 255));
+      expect(~Uint32.fromInt(3)).toEqual(Uint32.fromInt(Uint32.maxAsInt - 3));
     });
 
     test('bitwise and', () {
@@ -315,9 +310,7 @@ void main() {
       expect(
         Uint32.fromInt(21) | Uint32.fromInt(42),
       ).toEqual(Uint32.fromInt(63));
-      expect(
-        Uint32.fromInt(Uint32.max) | Uint32.fromInt(Uint32.max),
-      ).toEqual(Uint32.fromInt(Uint32.max));
+      expect(Uint32.max | Uint32.max).toEqual(Uint32.max);
     });
 
     test('bitwise xor', () {
@@ -327,9 +320,7 @@ void main() {
       expect(
         Uint32.fromInt(21) ^ Uint32.fromInt(42),
       ).toEqual(Uint32.fromInt(63));
-      expect(
-        Uint32.fromInt(Uint32.max) ^ Uint32.fromInt(Uint32.max),
-      ).toEqual(Uint32.fromInt(0));
+      expect(Uint32.max ^ Uint32.max).toEqual(Uint32.fromInt(0));
     });
 
     test('bitshift left', () {
@@ -358,26 +349,24 @@ void main() {
   group('Uint64', () {
     test('constructor', () {
       expect(Uint64.fromInt(0).values).toEqual((0, 0));
-      expect(Uint64(0xFFFFFFFF, 0xFFFFFFFF)).toEqual(Uint64.max);
-      expect(Uint64.parse('0xFFFFFFFF')).toEqual(Uint64(0, Uint32.max));
+      expect(Uint64.parse('0xFFFFFFFF_FFFFFFFF')).toEqual(Uint64.max);
+      expect(
+        Uint64.parse('0xFFFFFFFF'),
+      ).toEqual(Uint64.fromInt(Uint32.maxAsInt));
       expect(Uint64.parse('0xFFFFFFFFFFFFFFFF')).toEqual(Uint64.max);
       expect(() => Uint64.fromInt(pow(2, 51) as int)).throws.isArgumentError();
       expect(() => Uint64.fromInt(-3)).throws.isArgumentError();
-      expect(() => Uint64(Uint32.max + 1, 0)).throws.isArgumentError();
-      expect(() => Uint64(-100, Uint32.max)).throws.isArgumentError();
-      expect(() => Uint64(2, -3)).throws.isArgumentError();
+      expect(
+        () => Uint64.fromInt(Uint32.maxAsInt + 1),
+      ).throws.isArgumentError();
       expect(() => Uint64.parse('-27')).throws.isArgumentError();
     });
 
     test('toString', () {
       expect(Uint64.max.toString()).toEqual('18446744073709551615u64');
-      expect(Uint64(1, 0).toString()).toEqual('${0x100000000}u64');
-    });
-
-    test('hashCode', () {
       expect(
-        Uint64(3, 5).hashCode,
-      ).toEqual(Object.hash(64, Object.hashAll(Uint32List.fromList([3, 5]))));
+        Uint64.parse('0x1_00000000').toString(),
+      ).toEqual('${0x100000000}u64');
     });
   });
 }

@@ -148,14 +148,14 @@ void main() {
     });
   });
 
-  // TODO: Uint16, Uint32, Uint64, exceptions
+  // TODO: UintX16, UintX32, UintX64, exceptions
 }
 
 void testAgainstRandomBigInts<T>(
   int numRuns,
   Random r,
   BigInt Function() biCreator,
-  T Function(UintX, UintX) uintOp,
+  T Function(UintX, UintX) UintXOp,
   T Function(BigInt, BigInt) biOp,
 ) {
   for (int i = 0; i < numRuns; i++) {
@@ -164,7 +164,7 @@ void testAgainstRandomBigInts<T>(
     int bits = max(one.bitLength, two.bitLength);
     UintX uone = UintX.fromBigInt(bits, one);
     UintX utwo = UintX.fromBigInt(bits, two);
-    expect(uintOp(uone, utwo)).toEqual(biOp(one, two));
+    expect(UintXOp(uone, utwo)).toEqual(biOp(one, two));
   }
 }
 
