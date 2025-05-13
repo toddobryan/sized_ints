@@ -5,38 +5,10 @@ import 'package:sized_ints/sized_int.dart';
 
 /// Value is stored as a big-endian int. If the value is negative,
 /// uint32List.first is padded with 1s.
-class IntX extends SizedInt {
-  IntX._(super.bits, super.uints);
+abstract class Int<T extends Int<T>> extends SizedInt {
+  Int(super.bits, super.uints);
 
-  factory IntX.fromInt(int bits, int value) {
-    if (value < Int32.minAsInt || value > Int32.maxAsInt) {
-      throw ArgumentError(
-        'value must be in range [-2^31, 2^31 - 1], '
-        'use fromBigInt for values outside the range',
-      );
-    }
-    if (bits < value.bitLength) {
-      throw ArgumentError(
-        'value can not be represented in the given number of bits',
-      );
-    }
-    return IntX._(bits, SizedInt.signedIntToList(bits, value));
-  }
-
-  factory IntX.fromBigInt(int bits, BigInt value) {
-    BigInt min = minAsBigInt(bits);
-    BigInt max = maxAsBigInt(bits);
-    if (value < min || value > max) {
-      throw ArgumentError(
-        'value can not be represented in the given number of bits',
-      );
-    }
-    return IntX._(bits, SizedInt.signedBigIntToList(bits, value));
-  }
-
-  factory IntX.parse(int bits, String value) {
-    return IntX.fromBigInt(bits, parseWithUnderscores(value));
-  }
+  T construct(TypedDataList<int> newUints);
 
   @override
   int toInt() {
@@ -131,17 +103,58 @@ class IntX extends SizedInt {
   }
 
   // Bit-wise operations
-  IntX operator ~() {
+  Int operator ~() {
     TypedDataList<int> result = SizedInt.newList(uints.length);
     for (int i = 0; i < uints.length; i++) {
       result[i] = ~uints[i];
     }
-    return IntX._(bits, result);
+    return construct(result);
   }
 }
 
-class Int8 extends IntX {
-  Int8.fromInt(int value) : super._(8, SizedInt.signedIntToList(8, value));
+class IntX extends Int<IntX> {
+  IntX._(super.bits, super.uints);
+
+  factory IntX.fromInt(int bits, int value) {
+    if (value < Int32.minAsInt || value > Int32.maxAsInt) {
+      throw ArgumentError(
+        'value must be in range [-2^31, 2^31 - 1], '
+        'use fromBigInt for values outside the range',
+      );
+    }
+    if (bits < value.bitLength) {
+      throw ArgumentError(
+        'value can not be represented in the given number of bits',
+      );
+    }
+    return IntX._(bits, SizedInt.signedIntToList(bits, value));
+  }
+
+  factory IntX.fromBigInt(int bits, BigInt value) {
+    BigInt min = Int.minAsBigInt(bits);
+    BigInt max = Int.maxAsBigInt(bits);
+    if (value < min || value > max) {
+      throw ArgumentError(
+        'value can not be represented in the given number of bits',
+      );
+    }
+    return IntX._(bits, SizedInt.signedBigIntToList(bits, value));
+  }
+
+  factory IntX.parse(int bits, String value) {
+    return IntX.fromBigInt(bits, parseWithUnderscores(value));
+  }
+
+  @override
+  IntX construct(TypedDataList<int> newUints) => IntX._(bits, newUints);
+}
+
+class Int8 extends Int<Int8> {
+  Int8(TypedDataList<int> newUints) : super(8, newUints);
+  Int8.fromInt(int value) : super(8, SizedInt.signedIntToList(8, value));
+
+  @override
+  Int8 construct(TypedDataList<int> newUints) => Int8(newUints);
 
   static int maxAsInt = 127;
   static Int8 max = Int8.fromInt(maxAsInt);
@@ -149,8 +162,12 @@ class Int8 extends IntX {
   static Int8 min = Int8.fromInt(minAsInt);
 }
 
-class Int16 extends IntX {
-  Int16.fromInt(int value) : super._(16, SizedInt.signedIntToList(16, value));
+class Int16 extends Int<Int16> {
+  Int16(TypedDataList<int> newUints) : super(16, newUints);
+  Int16.fromInt(int value) : super(16, SizedInt.signedIntToList(16, value));
+
+  @override
+  Int16 construct(TypedDataList<int> newUints) => Int16(newUints);
 
   static int maxAsInt = 0x7FFF;
   static Int16 max = Int16.fromInt(maxAsInt);
@@ -158,14 +175,18 @@ class Int16 extends IntX {
   static Int16 min = Int16.fromInt(minAsInt);
 }
 
-class Int32 extends IntX {
-  Int32.fromInt(int value) : super._(32, SizedInt.signedIntToList(32, value));
+class Int32 extends Int<Int32> {
+  Int32(TypedDataList<int> newUints) : super(32, newUints);
+  Int32.fromInt(int value) : super(32, SizedInt.signedIntToList(32, value));
 
   Int32.fromBigInt(BigInt value)
-    : super._(32, SizedInt.signedBigIntToList(32, value));
+    : super(32, SizedInt.signedBigIntToList(32, value));
 
   Int32.parse(String value)
-    : super._(32, SizedInt.signedBigIntToList(32, parseWithUnderscores(value)));
+    : super(32, SizedInt.signedBigIntToList(32, parseWithUnderscores(value)));
+
+  @override
+  Int32 construct(TypedDataList<int> newUints) => Int32(newUints);
 
   static int maxAsInt = 0x7FFFFFFF;
   static Int32 max = Int32.fromInt(maxAsInt);
@@ -173,27 +194,21 @@ class Int32 extends IntX {
   static Int32 min = Int32.fromInt(minAsInt);
 }
 
-class Int64 extends IntX {
-  Int64.fromInt(int value) : super._(64, SizedInt.signedIntToList(64, value));
+class Int64 extends Int<Int64> {
+  Int64(TypedDataList<int> newUints) : super(64, newUints);
+  Int64.fromInt(int value) : super(64, SizedInt.signedIntToList(64, value));
 
   Int64.fromBigInt(BigInt value)
-    : super._(64, SizedInt.signedBigIntToList(64, value));
+    : super(64, SizedInt.signedBigIntToList(64, value));
 
   Int64.parse(String value)
-    : super._(64, SizedInt.signedBigIntToList(64, parseWithUnderscores(value)));
+    : super(64, SizedInt.signedBigIntToList(64, parseWithUnderscores(value)));
+
+  @override
+  Int64 construct(TypedDataList<int> newUints) => Int64(newUints);
 
   static BigInt minAsBigInt = parseWithUnderscores('-0x8000_0000_0000_0000');
   static Int64 min = Int64.fromBigInt(minAsBigInt);
-
   static BigInt maxAsBigInt = parseWithUnderscores('0x7FFF_FFFF_FFFF_FFFF');
   static Int64 max = Int64.fromBigInt(maxAsBigInt);
-}
-
-void main() {
-  IntX neg512 = IntX.fromInt(10, -512);
-  print(neg512.uints);
-  IntX pos512 = IntX.fromInt(10, 512);
-  print(pos512.uints);
-  print(neg512.toInt());
-  print(neg512.toUnsignedInt());
 }

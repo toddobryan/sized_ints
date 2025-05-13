@@ -155,7 +155,7 @@ void testAgainstRandomBigInts<T>(
   int numRuns,
   Random r,
   BigInt Function() biCreator,
-  T Function(UintX, UintX) UintXOp,
+  T Function(UintX, UintX) uintXOp,
   T Function(BigInt, BigInt) biOp,
 ) {
   for (int i = 0; i < numRuns; i++) {
@@ -164,7 +164,7 @@ void testAgainstRandomBigInts<T>(
     int bits = max(one.bitLength, two.bitLength);
     UintX uone = UintX.fromBigInt(bits, one);
     UintX utwo = UintX.fromBigInt(bits, two);
-    expect(UintXOp(uone, utwo)).toEqual(biOp(one, two));
+    expect(uintXOp(uone, utwo)).toEqual(biOp(one, two));
   }
 }
 

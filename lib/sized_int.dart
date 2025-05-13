@@ -151,7 +151,7 @@ abstract class SizedInt {
         'receiver and argument must have same number of bits,'
         'given: $bits and ${other.bits}',
       );
-    } else if (this is IntX && other is Uint || other is IntX && this is Uint) {
+    } else if (this is Int && other is Uint || other is Int && this is Uint) {
       throw ArgumentError(
         'receiver and argument must be same type, given: '
         'receiver: $runtimeType, argument: ${other.runtimeType}',
