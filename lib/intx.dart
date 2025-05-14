@@ -63,7 +63,7 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   String toRadixString(int radix) {
     if (signBit == 1) {
       BigInt unsigned = (~this).toBigInt() + BigInt.one;
-      return '-${unsigned.toRadixString(radix)}';
+      return '-${unsigned.toRadixString(radix)}$suffix';
     } else {
       return super.toRadixString(radix);
     }
@@ -158,10 +158,12 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     TypedDataList<int> result = flipBits();
     result =
         (signBit == 1)
-            ? SizedInt.extendZerothElementNegative(bits, result)
-            : SizedInt.extendZerothElementPositive(bits, result);
+            ? SizedInt.extendZerothElementPositive(bits, result)
+            : SizedInt.extendZerothElementNegative(bits, result);
     return construct(result);
   }
+
+  // Arithmetic
 }
 
 class IntX extends Int<IntX> {
@@ -263,4 +265,10 @@ class Int64 extends Int<Int64> {
   static Int64 min = Int64.fromBigInt(minAsBigInt);
   static BigInt maxAsBigInt = parseWithUnderscores('0x7FFF_FFFF_FFFF_FFFF');
   static Int64 max = Int64.fromBigInt(maxAsBigInt);
+}
+
+void main() {
+  IntX i = IntX.parse(91, '2214655670987396372810047680');
+  print(i);
+  print(~i);
 }

@@ -224,8 +224,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
   }
 
   static TypedDataList<int> signedBigIntToList(int bits, BigInt value) {
-    int valueBitLength = value.bitLength + (value < BigInt.zero ? 1 : 0);
-    if (valueBitLength > bits) {
+    if (value.signedBitLength > bits) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
     TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
@@ -238,8 +237,9 @@ abstract class SizedInt<T extends SizedInt<T>> {
     }
     if (value < BigInt.zero) {
       for (int i = list.length - 1; i >= 0; i--) {
-        list[i] = ~list[i] + 1;
+        list[i] = ~list[i];
       }
+      // add 1
       list = extendZerothElementNegative(bits, list);
     } else {
       list = extendZerothElementPositive(bits, list);
@@ -304,4 +304,8 @@ abstract class SizedInt<T extends SizedInt<T>> {
   T operator &(T other) => _binaryBinOp(other, (int t, int o) => t & o);
   T operator |(T other) => _binaryBinOp(other, (int t, int o) => t | o);
   T operator ^(T other) => _binaryBinOp(other, (int t, int o) => t ^ o);
+}
+
+extension BigIntOp on BigInt {
+  int get signedBitLength => bitLength + (isNegative ? 1 : 0);
 }

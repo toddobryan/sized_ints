@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:sized_ints/intx.dart';
 import 'package:checks/checks.dart';
+import 'package:sized_ints/sized_int.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -43,16 +44,18 @@ void testAgainstRandomBigInts<T>(
   int numRuns,
   Random r,
   BigInt Function() biCreator,
-  T Function(IntX, IntX) uintXOp,
+  T Function(IntX, IntX) intXOp,
   T Function(BigInt, BigInt) biOp,
 ) {
   for (int i = 0; i < numRuns; i++) {
     BigInt one = biCreator();
     BigInt two = biCreator();
-    int bits = max(one.bitLength, two.bitLength);
-    IntX uone = IntX.fromBigInt(bits, one);
-    IntX utwo = IntX.fromBigInt(bits, two);
-    T actual = uintXOp(uone, utwo);
+    print('one: $one, two: $two');
+    int bits = max(one.signedBitLength, two.signedBitLength);
+    IntX ione = IntX.fromBigInt(bits, one);
+    IntX itwo = IntX.fromBigInt(bits, two);
+    print('bits: $bits, ione: $ione, itwo: $itwo');
+    T actual = intXOp(ione, itwo);
     T checked = biOp(one, two);
     check(actual).equals(checked);
   }
