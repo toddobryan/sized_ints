@@ -1,21 +1,19 @@
-import 'dart:math';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:sized_ints/sized_int.dart';
 
 /// Value is stored as a big-endian int. If the value is negative,
 /// uint32List.first is padded with 1s.
-abstract class Int<T extends Int<T>> extends SizedInt {
+abstract class Int<T extends Int<T>> extends SizedInt<T> {
   Int(super.bits, super.uints);
-
-  T construct(TypedDataList<int> newUints);
 
   @override
   int toInt() {
     if (signBit != 1) {
       return toUnsignedInt();
     } else {
-      int lastIntIndex = max(
+      int lastIntIndex = math.max(
         uints.length - (32 ~/ SizedInt.bitsPerListElement),
         0,
       );
@@ -78,7 +76,7 @@ abstract class Int<T extends Int<T>> extends SizedInt {
     if (bits < 1 || bits > 32) {
       throw ArgumentError('min only defined for 1 to 32 bits');
     }
-    return -pow(2, bits - 1).toInt();
+    return -math.pow(2, bits - 1).toInt();
   }
 
   static BigInt minAsBigInt(int bits) {
@@ -88,12 +86,12 @@ abstract class Int<T extends Int<T>> extends SizedInt {
     return -(BigInt.one << bits);
   }
 
-  /*static int max(int bits) {
+  static int max(int bits) {
     if (bits < 1 || bits > 32) {
       throw ArgumentError('max only defined for 1 to 32 bits');
     }
-    return pow(2, bits - 1).toInt() - 1;
-  }*/
+    return math.pow(2, bits - 1).toInt() - 1;
+  }
 
   static BigInt maxAsBigInt(int bits) {
     if (bits < 1) {
@@ -102,12 +100,66 @@ abstract class Int<T extends Int<T>> extends SizedInt {
     return (BigInt.one << bits) - BigInt.one;
   }
 
-  // Bit-wise operations
-  Int operator ~() {
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+  // Comparison methods
+
+  bool _checkUints(T other, bool Function(int, int) op) {
     for (int i = 0; i < uints.length; i++) {
-      result[i] = ~uints[i];
+      if (op(uints[i], other.uints[i])) {
+        return true;
+      } else if (uints[i] == other.uints[i]) {
+        // continue
+      } else {
+        return false;
+      }
     }
+    return false;
+  }
+
+  bool _compare(
+    T other,
+    bool negPos,
+    bool posNeg,
+    bool Function(int, int) posPos,
+    bool Function(int, int) negNeg,
+  ) {
+    checkBitsAreSame(other);
+    if (signBit == 1 && other.signBit == 0) {
+      return negPos;
+    } else if (signBit == 0 && other.signBit == 1) {
+      return posNeg;
+    } else if (signBit == 0) {
+      // other.signBit is also 0
+      return _checkUints(other, posPos);
+    } else {
+      // signBit and other.signBit are both 1
+      return _checkUints(other, negNeg);
+    }
+  }
+
+  bool operator <(T other) => _compare(
+    other,
+    true,
+    false,
+    (int t, int o) => t < o,
+    (int t, int o) => t > o,
+  );
+  bool operator >(T other) => _compare(
+    other,
+    false,
+    true,
+    (int t, int o) => t > o,
+    (int t, int o) => t < o,
+  );
+  bool operator <=(T other) => !(this > other);
+  bool operator >=(T other) => !(this < other);
+
+  // Bit-wise operations
+  T operator ~() {
+    TypedDataList<int> result = flipBits();
+    result =
+        (signBit == 1)
+            ? SizedInt.extendZerothElementNegative(bits, result)
+            : SizedInt.extendZerothElementPositive(bits, result);
     return construct(result);
   }
 }

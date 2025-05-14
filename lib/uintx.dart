@@ -5,7 +5,7 @@ import 'package:sized_ints/sized_int.dart';
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
 /// operations. Values are stored as lists of 32-bit non-negative ints,
 /// since those are supported on both native and web
-abstract class Uint<T extends Uint<T>> extends SizedInt {
+abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   Uint(super.bits, super.uints);
 
   @override
@@ -14,25 +14,7 @@ abstract class Uint<T extends Uint<T>> extends SizedInt {
   @override
   String get suffix => 'u$bits';
 
-  T construct(TypedDataList<int> uints);
-
   // Comparison methods
-
-  @override
-  bool operator ==(Object other) {
-    if (other is! Uint || other.bits != bits) {
-      return false;
-    }
-    for (int i = 0; i < uints.length; i++) {
-      if (uints[i] != other.uints[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  @override
-  int get hashCode => Object.hash(bits, Object.hashAll(uints.toList()));
 
   bool _compare(T other, bool Function(int, int) op) {
     checkBitsAreSame(other);
@@ -56,26 +38,10 @@ abstract class Uint<T extends Uint<T>> extends SizedInt {
 
   // Bit-wise operations
   T operator ~() {
-    TypedDataList<int> result = SizedInt.newList(uints.length);
-    for (int i = 0; i < uints.length; i++) {
-      result[i] = ~uints[i];
-    }
+    TypedDataList<int> result = flipBits();
     result = SizedInt.extendZerothElementPositive(bits, result);
     return construct(result);
   }
-
-  T _binaryBinOp(T other, int Function(int, int) op) {
-    checkBitsAreSame(other);
-    TypedDataList<int> result = SizedInt.newList(uints.length);
-    for (int i = 0; i < uints.length; i++) {
-      result[i] = op(uints[i], other.uints[i]);
-    }
-    return construct(result);
-  }
-
-  T operator &(T other) => _binaryBinOp(other, (int t, int o) => t & o);
-  T operator |(T other) => _binaryBinOp(other, (int t, int o) => t | o);
-  T operator ^(T other) => _binaryBinOp(other, (int t, int o) => t ^ o);
 
   // Bit-shift operations
   T operator <<(int n) {

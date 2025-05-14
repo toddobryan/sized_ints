@@ -33,7 +33,7 @@ BigInt maxUnsignedAsBigInt(int bits) {
 BigInt parseWithUnderscores(String value) =>
     BigInt.parse(value.replaceAll('_', ''));
 
-abstract class SizedInt {
+abstract class SizedInt<T extends SizedInt<T>> {
   SizedInt(this.bits, this.uints) {
     if (bits < 1) {
       throw ArgumentError('bits must be 1 one or greater, given: $bits');
@@ -56,6 +56,8 @@ abstract class SizedInt {
       );
     }
   }
+
+  T construct(TypedDataList<int> newUints);
 
   // Change this section to use a different bit size for elements of the list
   static final int bitsPerListElement = 8;
@@ -265,4 +267,41 @@ abstract class SizedInt {
     list[0] = list[0] | negativeMask(bits);
     return list;
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (runtimeType != other.runtimeType || (other as SizedInt).bits != bits) {
+      return false;
+    }
+    for (int i = 0; i < uints.length; i++) {
+      if (uints[i] != other.uints[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(bits, Object.hashAll(uints.toList()));
+
+  TypedDataList<int> flipBits() {
+    TypedDataList<int> result = SizedInt.newList(uints.length);
+    for (int i = 0; i < uints.length; i++) {
+      result[i] = ~uints[i];
+    }
+    return result;
+  }
+
+  T _binaryBinOp(T other, int Function(int, int) op) {
+    checkBitsAreSame(other);
+    TypedDataList<int> result = SizedInt.newList(uints.length);
+    for (int i = 0; i < uints.length; i++) {
+      result[i] = op(uints[i], other.uints[i]);
+    }
+    return construct(result);
+  }
+
+  T operator &(T other) => _binaryBinOp(other, (int t, int o) => t & o);
+  T operator |(T other) => _binaryBinOp(other, (int t, int o) => t | o);
+  T operator ^(T other) => _binaryBinOp(other, (int t, int o) => t ^ o);
 }
