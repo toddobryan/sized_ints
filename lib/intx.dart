@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:sized_ints/sized_int.dart';
@@ -13,7 +13,7 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     if (signBit != 1) {
       return toUnsignedInt();
     } else {
-      int lastIntIndex = math.max(
+      int lastIntIndex = max(
         uints.length - (32 ~/ SizedInt.bitsPerListElement),
         0,
       );
@@ -57,6 +57,7 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   }
 
   int get signBitMask => (1 << modBitSize(bits)) - 1;
+  @override
   int get signBit => (uints.first & signBitMask) >> (modBitSize(bits) - 1);
 
   @override
@@ -72,11 +73,11 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   @override
   String get suffix => "i$bits";
 
-  static int min(int bits) {
+  static int minAsInt(int bits) {
     if (bits < 1 || bits > 32) {
-      throw ArgumentError('min only defined for 1 to 32 bits');
+      throw ArgumentError('minAsInt only defined for 1 to 32 bits');
     }
-    return -math.pow(2, bits - 1).toInt();
+    return -pow(2, bits - 1).toInt();
   }
 
   static BigInt minAsBigInt(int bits) {
@@ -86,11 +87,11 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     return -(BigInt.one << bits);
   }
 
-  static int max(int bits) {
+  static int maxAsInt(int bits) {
     if (bits < 1 || bits > 32) {
-      throw ArgumentError('max only defined for 1 to 32 bits');
+      throw ArgumentError('maxAsInt only defined for 1 to 32 bits');
     }
-    return math.pow(2, bits - 1).toInt() - 1;
+    return pow(2, bits - 1).toInt() - 1;
   }
 
   static BigInt maxAsBigInt(int bits) {
@@ -100,70 +101,15 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     return (BigInt.one << bits) - BigInt.one;
   }
 
-  // Comparison methods
-
-  bool _checkUints(T other, bool Function(int, int) op) {
-    for (int i = 0; i < uints.length; i++) {
-      if (op(uints[i], other.uints[i])) {
-        return true;
-      } else if (uints[i] == other.uints[i]) {
-        // continue
-      } else {
-        return false;
-      }
-    }
-    return false;
-  }
-
-  bool _compare(
-    T other,
-    bool negPos,
-    bool posNeg,
-    bool Function(int, int) posPos,
-    bool Function(int, int) negNeg,
-  ) {
-    checkBitsAreSame(other);
-    if (signBit == 1 && other.signBit == 0) {
-      return negPos;
-    } else if (signBit == 0 && other.signBit == 1) {
-      return posNeg;
-    } else if (signBit == 0) {
-      // other.signBit is also 0
-      return _checkUints(other, posPos);
-    } else {
-      // signBit and other.signBit are both 1
-      return _checkUints(other, negNeg);
-    }
-  }
-
-  bool operator <(T other) => _compare(
-    other,
-    true,
-    false,
-    (int t, int o) => t < o,
-    (int t, int o) => t > o,
-  );
-  bool operator >(T other) => _compare(
-    other,
-    false,
-    true,
-    (int t, int o) => t > o,
-    (int t, int o) => t < o,
-  );
-  bool operator <=(T other) => !(this > other);
-  bool operator >=(T other) => !(this < other);
-
   // Bit-wise operations
-  T operator ~() {
-    TypedDataList<int> result = flipBits();
+  /*T operator ~() {
+    TypedDataList<int> result = uints.flipBits();
     result =
         (signBit == 1)
             ? SizedInt.extendZerothElementPositive(bits, result)
             : SizedInt.extendZerothElementNegative(bits, result);
     return construct(result);
-  }
-
-  // Arithmetic
+  }*/
 }
 
 class IntX extends Int<IntX> {
@@ -265,10 +211,4 @@ class Int64 extends Int<Int64> {
   static Int64 min = Int64.fromBigInt(minAsBigInt);
   static BigInt maxAsBigInt = parseWithUnderscores('0x7FFF_FFFF_FFFF_FFFF');
   static Int64 max = Int64.fromBigInt(maxAsBigInt);
-}
-
-void main() {
-  IntX i = IntX.parse(91, '2214655670987396372810047680');
-  print(i);
-  print(~i);
 }

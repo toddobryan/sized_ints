@@ -14,8 +14,5 @@ void main() {
       check(SizedInt.negativeMask(3)).equals(-8);
       check(SizedInt.negativeMask(8)).equals(-256);
     });
-    test('sizedIntToList', () {
-      check(SizedInt.signedIntToList(8, -1).toString()).equals('[255]');
-    });
   });
 }

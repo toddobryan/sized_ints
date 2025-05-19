@@ -37,6 +37,35 @@ void main() {
         (b1, b2) => b1 < b2,
       );
     });
+
+    test('greater than', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => u1 > u2,
+        (b1, b2) => b1 > b2,
+      );
+    });
+
+    test('addition', () {
+      check(
+        IntX.fromInt(8, -128) + IntX.fromInt(8, -1),
+      ).equals(IntX.fromInt(8, 127));
+    });
+    testAgainstRandomBigInts(
+      100,
+      r,
+      () => randomBigInt(r, 3, (a, b) => a * b),
+      (u1, u2) => (u1 + u2).toBigInt(),
+      (b1, b2) {
+        if (b1.isNegative != b2.isNegative) {
+          return b1 + b2;
+        } else if (b1.isNegative) {
+          return 
+        }
+      }
+    )
   });
 }
 
@@ -50,11 +79,9 @@ void testAgainstRandomBigInts<T>(
   for (int i = 0; i < numRuns; i++) {
     BigInt one = biCreator();
     BigInt two = biCreator();
-    print('one: $one, two: $two');
     int bits = max(one.signedBitLength, two.signedBitLength);
     IntX ione = IntX.fromBigInt(bits, one);
     IntX itwo = IntX.fromBigInt(bits, two);
-    print('bits: $bits, ione: $ione, itwo: $itwo');
     T actual = intXOp(ione, itwo);
     T checked = biOp(one, two);
     check(actual).equals(checked);
