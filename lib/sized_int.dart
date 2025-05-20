@@ -4,9 +4,11 @@ import 'dart:typed_data';
 import 'package:sized_ints/intx.dart';
 import 'package:sized_ints/uintx.dart';
 
+typedef IntList = TypedDataList<int>;
+
 // number of (rightmost) bits that "count" in the most significant Uint32.
 int modBitSize(int bits) {
-  int mod = bits % SizedInt.bitsPerListElement;
+  int mod = (bits % SizedInt.bitsPerListElement).toInt();
   return mod == 0 ? SizedInt.bitsPerListElement : mod;
 }
 
@@ -57,22 +59,21 @@ abstract class SizedInt<T extends SizedInt<T>> {
     }
   }
 
-  T construct(TypedDataList<int> newUints);
+  T construct(IntList newUints);
 
   // 0 for non-neg, 1 for neg
   int get signBit;
 
   // Change this section to use a different bit size for elements of the list
-  static final int bitsPerListElement = 8;
+  static final int bitsPerListElement = 16;
 
-  static TypedDataList<int> newList(int length) => Uint8List(length);
+  static IntList newList(int length) => Uint16List(length);
 
-  static TypedDataList<int> listFromInts(List<int> ints) =>
-      Uint8List.fromList(ints);
+  static IntList listFromInts(List<int> ints) => Uint16List.fromList(ints);
   // Everything about bit size of uints should be encapsulated here ^^^
 
   final int bits;
-  final TypedDataList<int> uints;
+  final IntList uints;
 
   // need to use pow instead of << since 32 bitsPerListElement would get cut
   // off in JS
@@ -132,7 +133,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
       uints.length - (32 ~/ SizedInt.bitsPerListElement),
       0,
     );
-    int value = uints[lastIntIndex];
+    int value = uints[lastIntIndex] & SizedInt.elementMask;
     for (int i = lastIntIndex + 1; i < uints.length; i++) {
       value = (value << SizedInt.bitsPerListElement) + uints[i];
     }
@@ -171,14 +172,14 @@ abstract class SizedInt<T extends SizedInt<T>> {
   }
 
   // TODO: any way to combine these four? Hard since BigInt doesn't extend num
-  static TypedDataList<int> unsignedIntToList(int bits, int value) {
+  static IntList unsignedIntToList(int bits, int value) {
     if (value < 0 || value > SizedInt.maxUint32) {
       throw ArgumentError('value must be in range [0, 2^32-1], given: $value');
     }
     if (bits < value.bitLength) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
-    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    IntList list = SizedInt.newList(expectedUintListLength(bits));
     int index = list.length - 1;
     while (value > 0) {
       list[index] = value % SizedInt.elementMod;
@@ -188,14 +189,14 @@ abstract class SizedInt<T extends SizedInt<T>> {
     return list;
   }
 
-  static TypedDataList<int> unsignedBigIntToList(int bits, BigInt value) {
+  static IntList unsignedBigIntToList(int bits, BigInt value) {
     if (value < BigInt.zero) {
       throw ArgumentError('value must be >= 0, given: $value');
     }
     if (value.bitLength > bits) {
       throw ArgumentError('value can not be represented in $bits bits');
     }
-    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    IntList list = SizedInt.newList(expectedUintListLength(bits));
     int index = list.length - 1;
     while (value > BigInt.zero) {
       list[index] = (value % SizedInt.elementModAsBigInt).toInt();
@@ -205,7 +206,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
     return list;
   }
 
-  static TypedDataList<int> signedIntToList(int bits, int value) {
+  static IntList signedIntToList(int bits, int value) {
     if (value < Int32.minAsInt || value > Int32.maxAsInt) {
       throw ArgumentError(
         'value must be in range [-2^31, 2^31-1], given: $value',
@@ -214,7 +215,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
     if (bits < value.signedBitLength) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
-    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    IntList list = SizedInt.newList(expectedUintListLength(bits));
     int absValue = value.abs();
     int index = list.length - 1;
     while (absValue > 0) {
@@ -231,11 +232,11 @@ abstract class SizedInt<T extends SizedInt<T>> {
     return list;
   }
 
-  static TypedDataList<int> signedBigIntToList(int bits, BigInt value) {
+  static IntList signedBigIntToList(int bits, BigInt value) {
     if (value.signedBitLength > bits) {
       throw ArgumentError('value $value will not fit in $bits bits');
     }
-    TypedDataList<int> list = SizedInt.newList(expectedUintListLength(bits));
+    IntList list = SizedInt.newList(expectedUintListLength(bits));
     BigInt absValue = value.abs();
     int index = list.length - 1;
     while (absValue > BigInt.zero) {
@@ -257,27 +258,23 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   static int negativeMask(int bits) => (~positiveMask(bits)).toSigned(32);
 
-  static TypedDataList<int> extendZerothElementPositive(
-    int bits,
-    TypedDataList<int> list,
-  ) {
+  static IntList extendZerothElementPositive(int bits, IntList list) {
     list[0] = list[0] & positiveMask(bits);
     return list;
   }
 
-  static TypedDataList<int> extendZerothElementNegative(
-    int bits,
-    TypedDataList<int> list,
-  ) {
+  static IntList extendZerothElementNegative(int bits, IntList list) {
     list[0] = list[0] | negativeMask(bits);
     return list;
   }
+
+  int signBitOf(IntList list) => list.signBit(bits);
 
   // Bitwise operations
 
   T _binaryBinOp(T other, int Function(int, int) op) {
     checkBitsAreSame(other);
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+    IntList result = SizedInt.newList(uints.length);
     for (int i = 0; i < uints.length; i++) {
       result[i] = op(uints[i], other.uints[i]);
     }
@@ -288,7 +285,14 @@ abstract class SizedInt<T extends SizedInt<T>> {
   T operator |(T other) => _binaryBinOp(other, (int t, int o) => t | o);
   T operator ^(T other) => _binaryBinOp(other, (int t, int o) => t ^ o);
 
-  T operator ~() => construct(uints.flipBits());
+  T operator ~() {
+    IntList result = uints.flipBits();
+    result =
+        (signBit == 1)
+            ? SizedInt.extendZerothElementNegative(bits, result)
+            : SizedInt.extendZerothElementPositive(bits, result);
+    return construct(result);
+  }
 
   // Comparison methods
 
@@ -305,8 +309,8 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   bool _compare(
     T other,
-    bool Function(TypedDataList<int>, TypedDataList<int>) posPos,
-    bool Function(TypedDataList<int>, TypedDataList<int>) negNeg,
+    bool Function(IntList, IntList) posPos,
+    bool Function(IntList, IntList) negNeg,
     bool posNeg,
     bool negPos,
   ) {
@@ -325,17 +329,15 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   bool operator <(T other) => _compare(
     other,
-    (TypedDataList<int> t, TypedDataList<int> o) => t.lessThan(o),
-    (TypedDataList<int> t, TypedDataList<int> o) =>
-        o.negate().lessThan(t.negate()),
+    (IntList t, IntList o) => t.lessThan(o),
+    (IntList t, IntList o) => o.negate().lessThan(t.negate()),
     false,
     true,
   );
   bool operator >(T other) => _compare(
     other,
-    (TypedDataList<int> t, TypedDataList<int> o) => t.greaterThan(o),
-    (TypedDataList<int> t, TypedDataList<int> o) =>
-        o.negate().greaterThan(t.negate()),
+    (IntList t, IntList o) => t.greaterThan(o),
+    (IntList t, IntList o) => o.negate().greaterThan(t.negate()),
     true,
     false,
   );
@@ -343,9 +345,15 @@ abstract class SizedInt<T extends SizedInt<T>> {
   bool operator >=(T other) => !(this < other);
 
   // Bit-shift operations
-
-  // Bit-shift operations
-  T operator <<(int n) => construct(uints.shiftBitsLeft(n));
+  T operator <<(int n) {
+    IntList result = uints.shiftBitsLeft(n);
+    if (signBitOf(result) == 1) {
+      result = SizedInt.extendZerothElementNegative(bits, result);
+    } else {
+      result = SizedInt.extendZerothElementPositive(bits, result);
+    }
+    return construct(result);
+  }
 
   T operator >>>(int n) => construct(uints.shiftBitsRightUnsigned(n));
 
@@ -354,7 +362,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
   // Arithmetic operators
   T operator +(T other) {
     checkBitsAreSame(other);
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+    IntList result = SizedInt.newList(uints.length);
     int carry = 0;
     for (int i = uints.length - 1; i >= 0; i--) {
       int sum = uints[i] + other.uints[i] + carry;
@@ -445,17 +453,23 @@ extension BigIntOp on BigInt {
   int get signedBitLength => bitLength + 1;
 }
 
-extension TypedDataListOp on TypedDataList<int> {
-  TypedDataList<int> flipBits() {
-    TypedDataList<int> result = SizedInt.newList(length);
-    for (int i = 0; i < length; i++) {
+extension IntListOp on IntList {
+  int signBit(int bits) {
+    int signBitMask = (1 << modBitSize(bits)) - 1;
+    return (first & signBitMask) >> (modBitSize(bits) - 1);
+  }
+
+  IntList flipBits() {
+    IntList result = SizedInt.newList(length);
+    result[0] = ~this[0] & SizedInt.elementMask;
+    for (int i = 1; i < length; i++) {
       result[i] = ~this[i];
     }
     return result;
   }
 
-  TypedDataList<int> negate() {
-    TypedDataList<int> result = SizedInt.newList(length);
+  IntList negate() {
+    IntList result = SizedInt.newList(length);
     int carry = 1; // add 1 to negate
     for (int i = result.length - 1; i >= 0; i--) {
       int newVal = (~this[i] & SizedInt.elementMask) + carry;
@@ -465,7 +479,7 @@ extension TypedDataListOp on TypedDataList<int> {
     return result;
   }
 
-  bool lessThan(TypedDataList<int> other) {
+  bool lessThan(IntList other) {
     assert(
       length == other.length && elementSizeInBytes == other.elementSizeInBytes,
     );
@@ -481,7 +495,7 @@ extension TypedDataListOp on TypedDataList<int> {
     return false;
   }
 
-  bool greaterThan(TypedDataList<int> other) {
+  bool greaterThan(IntList other) {
     assert(
       length == other.length && elementSizeInBytes == other.elementSizeInBytes,
     );
@@ -497,7 +511,7 @@ extension TypedDataListOp on TypedDataList<int> {
     return false;
   }
 
-  bool equals(TypedDataList<int> other) {
+  bool equals(IntList other) {
     assert(
       length == other.length && elementSizeInBytes == other.elementSizeInBytes,
     );
@@ -509,13 +523,13 @@ extension TypedDataListOp on TypedDataList<int> {
     return true;
   }
 
-  TypedDataList<int> _shiftElementsLeft(int slots) {
+  IntList _shiftElementsLeft(int slots) {
     if (slots == 0) {
       return SizedInt.listFromInts(toList());
     } else if (slots >= length) {
       return SizedInt.newList(length);
     } else {
-      TypedDataList<int> result = SizedInt.newList(length);
+      IntList result = SizedInt.newList(length);
       for (int i = 0; i < length - slots; i++) {
         result[i] = this[i + slots];
       }
@@ -523,9 +537,9 @@ extension TypedDataListOp on TypedDataList<int> {
     }
   }
 
-  TypedDataList<int> shiftBitsLeft(int n) {
+  IntList shiftBitsLeft(int n) {
     int elts = n ~/ SizedInt.bitsPerListElement;
-    TypedDataList<int> result = _shiftElementsLeft(elts);
+    IntList result = _shiftElementsLeft(elts);
     int bits = n % SizedInt.bitsPerListElement;
     int carry = 0;
     for (int i = length - 1 - elts; i >= 0; i--) {
@@ -535,13 +549,13 @@ extension TypedDataListOp on TypedDataList<int> {
     return result;
   }
 
-  TypedDataList<int> _shiftElementsRightUnsigned(int slots) {
+  IntList _shiftElementsRightUnsigned(int slots) {
     if (slots == 0) {
       return SizedInt.listFromInts(toList());
     } else if (slots >= length) {
       return SizedInt.newList(length);
     } else {
-      TypedDataList<int> result = SizedInt.newList(length);
+      IntList result = SizedInt.newList(length);
       for (int i = length - 1; i > 0; i--) {
         result[i] = this[i - slots];
       }
@@ -552,8 +566,8 @@ extension TypedDataListOp on TypedDataList<int> {
     }
   }
 
-  TypedDataList<int> shiftBitsRightUnsigned(int n) {
-    TypedDataList<int> result = SizedInt.newList(length);
+  IntList shiftBitsRightUnsigned(int n) {
+    IntList result = SizedInt.newList(length);
     int bits = n % SizedInt.bitsPerListElement;
     int carryMask = 0;
     for (int i = 0; i < length; i++) {
@@ -564,7 +578,7 @@ extension TypedDataListOp on TypedDataList<int> {
     return result._shiftElementsRightUnsigned(slots);
   }
 
-  TypedDataList<int> shiftBitsRightSigned(int n) {
+  IntList shiftBitsRightSigned(int n) {
     // TODO
     return shiftBitsRightUnsigned(n);
   }

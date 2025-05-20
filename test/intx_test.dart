@@ -5,6 +5,8 @@ import 'package:checks/checks.dart';
 import 'package:sized_ints/sized_int.dart';
 import 'package:test/test.dart';
 
+import 'test_utils.dart';
+
 void main() {
   Random r = Random();
 
@@ -52,50 +54,78 @@ void main() {
       check(
         IntX.fromInt(8, -128) + IntX.fromInt(8, -1),
       ).equals(IntX.fromInt(8, 127));
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 + u2).toBigInt(),
+        (b1, b2) {
+          BigInt mod =
+              BigInt.one << max(b1.signedBitLength, b2.signedBitLength);
+          return (b1 + b2).remainder(mod);
+        },
+      );
     });
-    testAgainstRandomBigInts(
-      100,
-      r,
-      () => randomBigInt(r, 3, (a, b) => a * b),
-      (u1, u2) => (u1 + u2).toBigInt(),
-      (b1, b2) {
-        if (b1.isNegative != b2.isNegative) {
-          return b1 + b2;
-        } else if (b1.isNegative) {
-          return 
-        }
-      }
-    )
+
+    test('subtraction', () {
+      check(
+        IntX.fromInt(8, -128) - IntX.fromInt(8, 1),
+      ).equals(IntX.fromInt(8, 1));
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 - u2).toBigInt(),
+        (b1, b2) {
+          BigInt mod =
+              BigInt.one << max(b1.signedBitLength, b2.signedBitLength);
+          return (b1 - b2).remainder(mod);
+        },
+      );
+    });
+
+    test('multiplication', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 * u2).toBigInt(),
+        (b1, b2) {
+          BigInt mod =
+              BigInt.one << max(b1.signedBitLength, b2.signedBitLength);
+          return (b1 * b2).remainder(mod);
+        },
+      );
+    });
+
+    test('int division', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 ~/ u2).toBigInt(),
+        (b1, b2) => b1 ~/ b2,
+      );
+    });
+
+    test('int mod', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 % u2).toBigInt(),
+        (b1, b2) => b1 % b2,
+      );
+    });
+
+    test('double division', () {
+      testAgainstRandomBigInts(
+        100,
+        r,
+        () => randomBigInt(r, 3, (a, b) => a * b),
+        (u1, u2) => u1 / u2,
+        (b1, b2) => b1 / b2,
+      );
+    });
   });
-}
-
-void testAgainstRandomBigInts<T>(
-  int numRuns,
-  Random r,
-  BigInt Function() biCreator,
-  T Function(IntX, IntX) intXOp,
-  T Function(BigInt, BigInt) biOp,
-) {
-  for (int i = 0; i < numRuns; i++) {
-    BigInt one = biCreator();
-    BigInt two = biCreator();
-    int bits = max(one.signedBitLength, two.signedBitLength);
-    IntX ione = IntX.fromBigInt(bits, one);
-    IntX itwo = IntX.fromBigInt(bits, two);
-    T actual = intXOp(ione, itwo);
-    T checked = biOp(one, two);
-    check(actual).equals(checked);
-  }
-}
-
-BigInt randomBigInt(Random r, int numInts, BigInt Function(BigInt, BigInt) op) {
-  List<BigInt> bigInts = List.generate(
-    numInts,
-    (i) => BigInt.from(r.nextInt(0x100000000) * (r.nextBool() ? 1 : -1)),
-  );
-  BigInt result = bigInts[0];
-  for (int i = 1; i < bigInts.length; i++) {
-    result = op(result, bigInts[i]);
-  }
-  return result;
 }

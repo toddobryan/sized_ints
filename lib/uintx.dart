@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:sized_ints/sized_int.dart';
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
@@ -13,6 +11,9 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
 
   @override
   int toInt() => toUnsignedInt();
+
+  @override
+  int signBitOf(IntList list) => 0;
 
   @override
   String get suffix => 'u$bits';
@@ -30,7 +31,7 @@ class UintX extends Uint<UintX> {
         'value must be in range [0, 2^$bits-1], given: $value',
       );
     }
-    TypedDataList<int> list = SizedInt.unsignedBigIntToList(bits, value);
+    IntList list = SizedInt.unsignedBigIntToList(bits, value);
     return UintX(bits, list);
   }
 
@@ -40,44 +41,50 @@ class UintX extends Uint<UintX> {
   }
 
   @override
-  UintX construct(TypedDataList<int> newUints) => UintX(bits, newUints);
+  UintX construct(IntList newUints) {
+    newUints = SizedInt.extendZerothElementPositive(bits, newUints);
+    for (int i = 1; i < newUints.length; i++) {
+      uints[i] = uints[i] & SizedInt.elementMask;
+    }
+    return UintX(bits, newUints);
+  }
 }
 
 class Uint8 extends Uint<Uint8> {
-  Uint8(TypedDataList<int> uints) : super(8, uints);
+  Uint8(IntList uints) : super(8, uints);
   Uint8.fromInt(int value) : super(8, SizedInt.unsignedIntToList(8, value));
 
   static final Uint8 max = Uint8.fromInt(maxAsInt);
   static final int maxAsInt = 0xFF;
 
   @override
-  Uint8 construct(TypedDataList<int> newUints) => Uint8(newUints);
+  Uint8 construct(IntList newUints) => Uint8(newUints);
 }
 
 class Uint16 extends Uint<Uint16> {
-  Uint16(TypedDataList<int> uints) : super(16, uints);
+  Uint16(IntList uints) : super(16, uints);
   Uint16.fromInt(int value) : super(16, SizedInt.unsignedIntToList(16, value));
 
   static final Uint16 max = Uint16.fromInt(maxAsInt);
   static final int maxAsInt = 0xFFFF;
 
   @override
-  Uint16 construct(TypedDataList<int> newUints) => Uint16(newUints);
+  Uint16 construct(IntList newUints) => Uint16(newUints);
 }
 
 class Uint32 extends Uint<Uint32> {
-  Uint32(TypedDataList<int> uints) : super(32, uints);
+  Uint32(IntList uints) : super(32, uints);
   Uint32.fromInt(int value) : super(32, SizedInt.unsignedIntToList(32, value));
 
   static final Uint32 max = Uint32.fromInt(maxAsInt);
   static final int maxAsInt = 0xFFFFFFFF;
 
   @override
-  Uint32 construct(TypedDataList<int> newUints) => Uint32(newUints);
+  Uint32 construct(IntList newUints) => Uint32(newUints);
 }
 
 class Uint64 extends Uint<Uint64> {
-  Uint64(TypedDataList<int> uints) : super(64, uints);
+  Uint64(IntList uints) : super(64, uints);
   Uint64.fromInt(int value) : super(64, SizedInt.unsignedIntToList(64, value));
 
   Uint64.fromBigInt(BigInt value)
@@ -93,7 +100,7 @@ class Uint64 extends Uint<Uint64> {
   static BigInt maxAsBigInt = BigInt.parse('0xFFFFFFFFFFFFFFFF');
 
   @override
-  Uint64 construct(TypedDataList<int> newUints) => Uint64(newUints);
+  Uint64 construct(IntList newUints) => Uint64(newUints);
 }
 
 extension IntOp on int {

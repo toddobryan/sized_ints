@@ -4,6 +4,8 @@ import 'package:sized_ints/uintx.dart';
 import 'package:checks/checks.dart';
 import 'package:test/test.dart';
 
+import 'test_utils.dart';
+
 void main() {
   Random r = Random();
 
@@ -21,20 +23,20 @@ void main() {
     });
 
     test('less than', () {
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => u1 < u2,
         (b1, b2) => b1 < b2,
       );
     });
 
     test('greater than', () {
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => u1 > u2,
         (b1, b2) => b1 > b2,
       );
@@ -57,10 +59,10 @@ void main() {
       check(
         UintX.fromInt(10, 1023) + UintX.fromInt(10, 21),
       ).equals(UintX.fromInt(10, 20));
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => (u1 + u2).toBigInt(),
         (b1, b2) {
           BigInt mod = BigInt.one << max(b1.bitLength, b2.bitLength);
@@ -74,6 +76,16 @@ void main() {
       check(
         (UintX.fromInt(8, 251) - UintX.fromInt(8, 255)).toInt(),
       ).equals(252);
+      testAgainstRandomBigUints(
+        100,
+        r,
+        () => randomBigUint(r, 3, (a, b) => a * b),
+        (u1, u2) => (u1 + u2).toBigInt(),
+        (b1, b2) {
+          BigInt mod = BigInt.one << max(b1.bitLength, b2.bitLength);
+          return (b1 + b2).remainder(mod);
+        },
+      );
     });
 
     test('simple multiplication', () {
@@ -87,10 +99,10 @@ void main() {
     });
 
     test('multiplication', () {
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => (u1 * u2).toBigInt(),
         (b1, b2) {
           BigInt mod = BigInt.one << max(b1.bitLength, b2.bitLength);
@@ -100,10 +112,10 @@ void main() {
     });
 
     test('int division', () {
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => (u1 ~/ u2).toBigInt(),
         (b1, b2) {
           BigInt mod = BigInt.one << max(b1.bitLength, b2.bitLength);
@@ -113,20 +125,20 @@ void main() {
     });
 
     test('int mod', () {
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => (u1 % u2).toBigInt(),
         (b1, b2) => b1 % b2,
       );
     });
 
     test('double division', () {
-      testAgainstRandomBigInts(
+      testAgainstRandomBigUints(
         100,
         r,
-        () => randomBigInt(r, 3, (a, b) => a * b),
+        () => randomBigUint(r, 3, (a, b) => a * b),
         (u1, u2) => u1 / u2,
         (b1, b2) => b1 / b2,
       );
@@ -161,35 +173,4 @@ void main() {
   });
 
   // TODO: UintX16, UintX32, UintX64, exceptions
-}
-
-void testAgainstRandomBigInts<T>(
-  int numRuns,
-  Random r,
-  BigInt Function() biCreator,
-  T Function(UintX, UintX) uintXOp,
-  T Function(BigInt, BigInt) biOp,
-) {
-  for (int i = 0; i < numRuns; i++) {
-    BigInt one = biCreator();
-    BigInt two = biCreator();
-    int bits = max(one.bitLength, two.bitLength);
-    UintX uone = UintX.fromBigInt(bits, one);
-    UintX utwo = UintX.fromBigInt(bits, two);
-    T actual = uintXOp(uone, utwo);
-    T checked = biOp(one, two);
-    check(actual).equals(checked);
-  }
-}
-
-BigInt randomBigInt(Random r, int numInts, BigInt Function(BigInt, BigInt) op) {
-  List<BigInt> bigInts = List.generate(
-    numInts,
-    (i) => BigInt.from(r.nextInt(0x100000000)),
-  );
-  BigInt result = bigInts[0];
-  for (int i = 1; i < bigInts.length; i++) {
-    result = op(result, bigInts[i]);
-  }
-  return result;
 }

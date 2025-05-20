@@ -50,15 +50,14 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   @override
   int calculateBitLength() {
     if (signBit == 1) {
-      return (~this).bitLength + 1;
+      return (~this).bitLength;
     } else {
       return super.calculateBitLength();
     }
   }
 
-  int get signBitMask => (1 << modBitSize(bits)) - 1;
   @override
-  int get signBit => (uints.first & signBitMask) >> (modBitSize(bits) - 1);
+  int get signBit => uints.signBit(bits);
 
   @override
   String toRadixString(int radix) {
@@ -100,16 +99,6 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     }
     return (BigInt.one << bits) - BigInt.one;
   }
-
-  // Bit-wise operations
-  /*T operator ~() {
-    TypedDataList<int> result = uints.flipBits();
-    result =
-        (signBit == 1)
-            ? SizedInt.extendZerothElementPositive(bits, result)
-            : SizedInt.extendZerothElementNegative(bits, result);
-    return construct(result);
-  }*/
 }
 
 class IntX extends Int<IntX> {
