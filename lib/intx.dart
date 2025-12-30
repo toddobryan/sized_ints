@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:sized_ints/sized_int.dart';
+import 'sized_int.dart';
 
 /// Value is stored as a big-endian int. If the value is negative,
 /// uint32List.first is padded with 1s.
@@ -103,7 +103,15 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   // Comparison methods
 
   bool _checkUints(T other, bool Function(int, int) op) {
-    for (int i = 0; i < uints.length; i++) {
+    // Have to check zeroth element separately to ignore bits at beginning.
+    if (op(uints[0] % SizedInt.elementMod, other.uints[0] % SizedInt.elementMod)) {
+      return true;
+    } else if (uints[0] % SizedInt.elementMod == other.uints[0] % SizedInt.elementMod) {
+      // continue
+    } else {
+      return false;
+    }
+    for (int i = 1; i < uints.length; i++) {
       if (op(uints[i], other.uints[i])) {
         return true;
       } else if (uints[i] == other.uints[i]) {
@@ -141,14 +149,14 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     true,
     false,
     (int t, int o) => t < o,
-    (int t, int o) => t > o,
+    (int t, int o) => t < o,
   );
   bool operator >(T other) => _compare(
     other,
     false,
     true,
     (int t, int o) => t > o,
-    (int t, int o) => t < o,
+    (int t, int o) => t > o,
   );
   bool operator <=(T other) => !(this > other);
   bool operator >=(T other) => !(this < other);
@@ -156,10 +164,6 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   // Bit-wise operations
   T operator ~() {
     TypedDataList<int> result = flipBits();
-    result =
-        (signBit == 1)
-            ? SizedInt.extendZerothElementPositive(bits, result)
-            : SizedInt.extendZerothElementNegative(bits, result);
     return construct(result);
   }
 
@@ -196,7 +200,9 @@ class IntX extends Int<IntX> {
   }
 
   factory IntX.parse(int bits, String value) {
-    return IntX.fromBigInt(bits, parseWithUnderscores(value));
+    IntX ix = IntX.fromBigInt(bits, parseWithUnderscores(value));
+    print(ix.toRadixString(16));
+    return ix;
   }
 
   @override
@@ -267,8 +273,19 @@ class Int64 extends Int<Int64> {
   static Int64 max = Int64.fromBigInt(maxAsBigInt);
 }
 
+extension BigIntHex on BigInt {
+  String get hex => toRadixString(16);
+}
+
+extension IntXHex on IntX {
+  String get hex => toRadixString(16);
+}
+
 void main() {
-  IntX i = IntX.parse(91, '2214655670987396372810047680');
+  BigInt bi = BigInt.from(-0x29a03d3a);
+  print(bi.hex);
+  IntX i = IntX.fromBigInt(33, bi);
   print(i);
-  print(~i);
+  print(i.hex);
+  print((~i).hex);
 }

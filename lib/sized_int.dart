@@ -1,10 +1,11 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:sized_ints/intx.dart';
-import 'package:sized_ints/uintx.dart';
+import 'intx.dart';
+import 'uintx.dart';
 
-// number of (rightmost) bits that "count" in the most significant Uint32.
+// number of (rightmost) bits that "count" in the most significant
+// element of uints.
 int modBitSize(int bits) {
   int mod = bits % SizedInt.bitsPerListElement;
   return mod == 0 ? SizedInt.bitsPerListElement : mod;
@@ -46,7 +47,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
       );
     } /*else if (uints.first.bitLength > modBitSize(bits)) {
       throw ArgumentError(
-        'Significtant bits in first element must be <= ${modBitSize(bits)}, '
+        'Significant bits in first element must be <= ${modBitSize(bits)}, '
         'given: ${uints.first.bitLength}',
       );
     }*/ else if (uints.any((elt) => elt.bitLength > bitsPerListElement)) {
@@ -60,12 +61,12 @@ abstract class SizedInt<T extends SizedInt<T>> {
   T construct(TypedDataList<int> newUints);
 
   // Change this section to use a different bit size for elements of the list
-  static final int bitsPerListElement = 8;
+  static final int bitsPerListElement = 32;
 
-  static TypedDataList<int> newList(int length) => Uint8List(length);
+  static TypedDataList<int> newList(int length) => Uint32List(length);
 
   static TypedDataList<int> listFromInts(List<int> ints) =>
-      Uint8List.fromList(ints);
+      Uint32List.fromList(ints);
   // Everything about bit size of uints should be encapsulated here ^^^
 
   final int bits;
@@ -81,11 +82,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
   static final int maxInt32 = 0x7FFFFFFF;
   static final int minInt32 = -0x80000000;
 
-  int? _bitLength;
-  int get bitLength {
-    _bitLength ??= calculateBitLength();
-    return _bitLength!;
-  }
+  int get bitLength => calculateBitLength();
 
   int calculateBitLength() {
     for (int i = 0; i < uints.length; i++) {
@@ -97,8 +94,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
     return 0;
   }
 
-  bool? _isNonZero;
-  bool get isNonZero => _isNonZero ??= uints.any((x) => x != 0);
+  bool get isNonZero => uints.any((x) => x != 0);
   bool get isZero => !isNonZero;
 
   String get bin => uints.map((x) => x.toRadixString(2)).join('_');
@@ -239,18 +235,26 @@ abstract class SizedInt<T extends SizedInt<T>> {
       for (int i = list.length - 1; i >= 0; i--) {
         list[i] = ~list[i];
       }
-      // add 1
-      list = extendZerothElementNegative(bits, list);
+      list = addOneToUints(list, list.length - 1, 0);
     } else {
       list = extendZerothElementPositive(bits, list);
     }
     return list;
   }
 
+  static TypedDataList<int> addOneToUints(TypedDataList<int> list, int index, int carry) {
+    list[index] = (list[index] + 1) % elementMod;
+    if (list[index] == 0 && index > 0) {
+      return addOneToUints(list, index - 1, 1);
+    } else {
+      return list;
+    }
+  }
+
   // a bunch of zeros followed by modBitSize(bits) - 1 ones.
   static int positiveMask(int bits) => (1 << modBitSize(bits)) - 1;
 
-  static int negativeMask(int bits) => (~positiveMask(bits)).toSigned(32);
+  static int negativeMask(int bits) => ~positiveMask(bits);
 
   static TypedDataList<int> extendZerothElementPositive(
     int bits,
@@ -307,5 +311,5 @@ abstract class SizedInt<T extends SizedInt<T>> {
 }
 
 extension BigIntOp on BigInt {
-  int get signedBitLength => bitLength + (isNegative ? 1 : 0);
+  int get signedBitLength => bitLength + 1;
 }

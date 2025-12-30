@@ -1,21 +1,25 @@
-import 'dart:math';
+import "dart:math";
 
-import 'package:sized_ints/intx.dart';
-import 'package:checks/checks.dart';
-import 'package:sized_ints/sized_int.dart';
-import 'package:test/test.dart';
+import "package:sized_ints/intx.dart";
+import "package:checks/checks.dart";
+import "package:sized_ints/sized_int.dart";
+import "package:test/test.dart";
 
 void main() {
   Random r = Random();
 
-  group('IntX', () {
-    test('constructors', () {
+  group("IntX", () {
+    test("constructors", () {
       Int sixtyThree = IntX.fromInt(7, 63);
       check(sixtyThree.toInt()).equals(63);
       check(sixtyThree.bitLength).equals(6);
       Int neg512 = IntX.fromInt(10, -512);
+      print(neg512.uints);
+      print(neg512.toRadixString(2));
+      print((~neg512).toRadixString(2));
       check(neg512.toInt()).equals(-512);
       check(neg512.bitLength).equals(10);
+
       Int neg1 = IntX.fromInt(4, -1);
       check(neg1.toInt()).equals(-1);
       check(neg1.bitLength).equals(1);
@@ -28,13 +32,41 @@ void main() {
       check(min64.bitLength).equals(64);
     });
 
-    test('lessThan', () {
+    test("random big ints are encoded correctly", () {
+      for (int i = 0; i < 100; i++) {
+        BigInt bi1 = randomBigInt(r, 3, (a, b) => a * b);
+        BigInt bi2 = randomBigInt(r, 3, (a, b) => a * b);
+        print("one: ${bi1.hex}, two: ${bi2.hex}");
+        int bi1Bits = bi1.signedBitLength;
+        int bi2Bits = bi2.signedBitLength;
+        int bits = max(bi1Bits, bi2Bits);
+        print("bits: ($bi1Bits, $bi2Bits) => $bits");
+        IntX ione = IntX.fromBigInt(bits, bi1);
+        IntX itwo = IntX.fromBigInt(bits, bi2);
+        print(
+            "ione: ${ione.hex}, itwo: ${itwo.hex}");
+        check(ione.toBigInt()).equals(bi1);
+        check(itwo.toBigInt()).equals(bi2);
+      }
+    });
+
+    test("lessThan", () {
       testAgainstRandomBigInts(
         100,
         r,
         () => randomBigInt(r, 3, (a, b) => a * b),
         (i1, i2) => i1 < i2,
         (b1, b2) => b1 < b2,
+      );
+    });
+
+    test("greaterThan", () {
+      testAgainstRandomBigInts(
+          100,
+          r,
+          () => randomBigInt(r, 3, (a, b) => a * b),
+          (i1, i2) => i1 > i2,
+          (b1, b2) => b1 > b2,
       );
     });
   });
@@ -50,11 +82,11 @@ void testAgainstRandomBigInts<T>(
   for (int i = 0; i < numRuns; i++) {
     BigInt one = biCreator();
     BigInt two = biCreator();
-    print('one: $one, two: $two');
+    print("one: ${one.hex}, two: ${two.hex}");
     int bits = max(one.signedBitLength, two.signedBitLength);
     IntX ione = IntX.fromBigInt(bits, one);
     IntX itwo = IntX.fromBigInt(bits, two);
-    print('bits: $bits, ione: $ione, itwo: $itwo');
+    print("bits: $bits, ione: $ione, itwo: $itwo");
     T actual = intXOp(ione, itwo);
     T checked = biOp(one, two);
     check(actual).equals(checked);
