@@ -1,6 +1,7 @@
-import 'dart:typed_data';
+import "dart:typed_data";
 
-import 'package:sized_ints/sized_int.dart';
+import "helpers.dart";
+import "sized_int.dart";
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
 /// operations. Values are stored as lists of 32-bit non-negative ints,
@@ -12,7 +13,7 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   int toInt() => toUnsignedInt();
 
   @override
-  String get suffix => 'u$bits';
+  String get suffix => "u$bits";
 
   // Comparison methods
 
@@ -27,7 +28,7 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
         return false;
       }
     }
-    // they're equal
+    // they"re equal
     return false;
   }
 
@@ -36,68 +37,68 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   bool operator <=(T other) => !(this > other);
   bool operator >=(T other) => !(this < other);
 
-  // Bit-wise operations
-  T operator ~() {
-    TypedDataList<int> result = flipBits();
-    result = SizedInt.extendZerothElementPositive(bits, result);
-    return construct(result);
+  @override
+  TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) {
+    TypedDataList<int> result = listFromInts(list);
+    result[0] = result[0] & positiveMask(bits);
+    return result;
   }
-
+  
   // Bit-shift operations
   T operator <<(int n) {
     if (n > bits) {
-      return construct(SizedInt.newList(uints.length));
+      return construct(newList(uints.length));
     }
     T result = this as T;
-    for (int i = 0; i < n ~/ SizedInt.bitsPerListElement; i++) {
-      result = result._shiftElementsLeft();
+    for (int i = 0; i < n ~/ bitsPerListElement; i++) {
+      result = result._withElementsShiftedLeft();
     }
-    result = result._shiftBitsLeft(n % SizedInt.bitsPerListElement);
+    result = result._withBitsShiftedLeft(n % bitsPerListElement);
     return result;
   }
 
   T operator >>>(int n) {
     if (n > bits) {
-      return construct(SizedInt.newList(uints.length));
+      return construct(newList(uints.length));
     }
     T result = this as T;
-    for (int i = 0; i < n ~/ SizedInt.bitsPerListElement; i++) {
+    for (int i = 0; i < n ~/ bitsPerListElement; i++) {
       result = result._shiftElementsRight();
     }
-    result = result._shiftBitsRight(n % SizedInt.bitsPerListElement);
+    result = result._shiftBitsRight(n % bitsPerListElement);
     return result;
   }
 
   T operator >>(int n) => this >>> n; // for unsigned, >> is the same as >>>
 
-  T _shiftElementsLeft() {
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+  T _withElementsShiftedLeft() {
+    TypedDataList<int> result = newList(uints.length);
     for (int i = 0; i < uints.length - 1; i++) {
       result[i] = uints[i + 1];
     }
-    result = SizedInt.extendZerothElementPositive(bits, result);
+    result = extendZerothElementPositive(bits, result);
     return construct(result);
   }
 
-  T _shiftBitsLeft(int n) {
-    if (n < 0 || n >= SizedInt.bitsPerListElement) {
+  T _withBitsShiftedLeft(int n) {
+    if (n < 0 || n >= bitsPerListElement) {
       throw ArgumentError(
-        'n must be in range [0, ${SizedInt.bitsPerListElement - 1}], '
-        'given: $n',
+        "n must be in range [0, ${bitsPerListElement - 1}], "
+        "given: $n",
       );
     }
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+    TypedDataList<int> result = newList(uints.length);
     int carry = 0;
     for (int i = uints.length - 1; i >= 0; i--) {
       result[i] = (uints[i] << n) + carry;
-      carry = uints[i] >>> (SizedInt.bitsPerListElement - n);
+      carry = uints[i] >>> (bitsPerListElement - n);
     }
-    result = SizedInt.extendZerothElementPositive(bits, result);
+    result = extendZerothElementPositive(bits, result);
     return construct(result);
   }
 
   T _shiftElementsRight() {
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+    TypedDataList<int> result = newList(uints.length);
     for (int i = uints.length - 1; i > 0; i--) {
       result[i] = uints[i - 1];
     }
@@ -105,17 +106,17 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   }
 
   T _shiftBitsRight(int n) {
-    if (n < 0 || n >= SizedInt.bitsPerListElement) {
+    if (n < 0 || n >= bitsPerListElement) {
       throw ArgumentError(
-        'n must be in range [0, ${SizedInt.bitsPerListElement - 1}], '
-        'given: $n',
+        "n must be in range [0, ${bitsPerListElement - 1}], "
+        "given: $n",
       );
     }
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+    TypedDataList<int> result = newList(uints.length);
     int carryMask = 0;
     for (int i = 0; i < uints.length; i++) {
       result[i] = (uints[i] >> n) | carryMask;
-      carryMask = uints[i] << (SizedInt.bitsPerListElement - n);
+      carryMask = uints[i] << (bitsPerListElement - n);
     }
     return construct(result);
   }
@@ -124,14 +125,14 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
 
   T operator +(T other) {
     checkBitsAreSame(other);
-    TypedDataList<int> result = SizedInt.newList(uints.length);
+    TypedDataList<int> result = newList(uints.length);
     int carry = 0;
     for (int i = uints.length - 1; i >= 0; i--) {
       int sum = uints[i] + other.uints[i] + carry;
-      result[i] = sum % SizedInt.elementMod;
-      carry = sum ~/ SizedInt.elementMod;
+      result[i] = sum % elementMod;
+      carry = sum ~/ elementMod;
     }
-    result = SizedInt.extendZerothElementPositive(bits, result);
+    result = extendZerothElementPositive(bits, result);
     return construct(result);
   }
 
@@ -153,12 +154,12 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   }
 
   T operator -() {
-    return ~this + construct(SizedInt.unsignedIntToList(bits, 1));
+    return ~this + construct(unsignedIntToList(bits, 1));
   }
 
   T operator *(T other) {
     checkBitsAreSame(other);
-    T result = construct(SizedInt.unsignedIntToList(bits, 0));
+    T result = construct(unsignedIntToList(bits, 0));
     if (isZero || other.isZero) {
       return result;
     }
@@ -186,14 +187,14 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   (T, T) _divAndMod(T other) {
     checkBitsAreSame(other);
     if (other.isZero) {
-      throw UnsupportedError('Integer division by zero');
+      throw UnsupportedError("Integer division by zero");
     }
     if (other > (this as T)) {
-      return (construct(SizedInt.unsignedIntToList(bits, 0)), this as T);
+      return (construct(unsignedIntToList(bits, 0)), this as T);
     }
     T dividend = this as T;
-    T quotient = construct(SizedInt.unsignedIntToList(bits, 0));
-    T one = construct(SizedInt.unsignedIntToList(bits, 1));
+    T quotient = construct(unsignedIntToList(bits, 0));
+    T one = construct(unsignedIntToList(bits, 1));
     while (dividend.bitLength >= other.bitLength && dividend >= other) {
       int count = 0;
       int bitDiff = dividend.bitLength - other.bitLength;
@@ -211,7 +212,7 @@ class UintX extends Uint<UintX> {
   UintX(super.bits, super.uints);
 
   UintX.fromInt(int bits, int value)
-    : super(bits, SizedInt.unsignedIntToList(bits, value));
+    : super(bits, unsignedIntToList(bits, value));
 
   factory UintX.fromBytes(int bits, Uint8List bytes) {
     BigInt value = BigInt.zero;
@@ -225,16 +226,16 @@ class UintX extends Uint<UintX> {
   factory UintX.fromBigInt(int bits, BigInt value) {
     if (value < BigInt.zero || value > maxUnsignedAsBigInt(bits)) {
       throw ArgumentError(
-        'value must be in range [0, 2^$bits-1], given: $value',
+        "value must be in range [0, 2^$bits-1], given: $value",
       );
     }
-    TypedDataList<int> list = SizedInt.unsignedBigIntToList(bits, value);
+    TypedDataList<int> list = unsignedBigIntToList(bits, value);
     return UintX(bits, list);
   }
 
   factory UintX.parse(int bits, String s) {
     // allow _ wherever in string and just delete it
-    return UintX.fromBigInt(bits, BigInt.parse(s.replaceAll('_', '')));
+    return UintX.fromBigInt(bits, BigInt.parse(s.replaceAll("_", "")));
   }
 
   @override
@@ -243,7 +244,7 @@ class UintX extends Uint<UintX> {
 
 class Uint8 extends Uint<Uint8> {
   Uint8(TypedDataList<int> uints) : super(8, uints);
-  Uint8.fromInt(int value) : super(8, SizedInt.unsignedIntToList(8, value));
+  Uint8.fromInt(int value) : super(8, unsignedIntToList(8, value));
   Uint8.fromBytes(Uint8List bytes) : super(8, bytes);
 
   static final Uint8 max = Uint8.fromInt(maxAsInt);
@@ -255,7 +256,7 @@ class Uint8 extends Uint<Uint8> {
 
 class Uint16 extends Uint<Uint16> {
   Uint16(TypedDataList<int> uints) : super(16, uints);
-  Uint16.fromInt(int value) : super(16, SizedInt.unsignedIntToList(16, value));
+  Uint16.fromInt(int value) : super(16, unsignedIntToList(16, value));
   Uint16.fromBytes(Uint8List bytes) : super(16, bytes);
 
   static final Uint16 max = Uint16.fromInt(maxAsInt);
@@ -267,7 +268,7 @@ class Uint16 extends Uint<Uint16> {
 
 class Uint32 extends Uint<Uint32> {
   Uint32(TypedDataList<int> uints) : super(32, uints);
-  Uint32.fromInt(int value) : super(32, SizedInt.unsignedIntToList(32, value));
+  Uint32.fromInt(int value) : super(32, unsignedIntToList(32, value));
   Uint32.fromBytes(Uint8List bytes) : super(32, bytes);
 
   static final Uint32 max = Uint32.fromInt(maxAsInt);
@@ -279,20 +280,20 @@ class Uint32 extends Uint<Uint32> {
 
 class Uint64 extends Uint<Uint64> {
   Uint64(TypedDataList<int> uints) : super(64, uints);
-  Uint64.fromInt(int value) : super(64, SizedInt.unsignedIntToList(64, value));
+  Uint64.fromInt(int value) : super(64, unsignedIntToList(64, value));
   Uint64.fromBytes(Uint8List bytes) : super(64, bytes);
 
   Uint64.fromBigInt(BigInt value)
-    : super(64, SizedInt.unsignedBigIntToList(64, value));
+    : super(64, unsignedBigIntToList(64, value));
 
   factory Uint64.parse(String value) {
-    return Uint64.fromBigInt(BigInt.parse(value.replaceAll('_', '')));
+    return Uint64.fromBigInt(BigInt.parse(value.replaceAll("_", "")));
   }
 
   (int, int) get values => (uints[0], uints[1]);
 
   static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
-  static BigInt maxAsBigInt = BigInt.parse('0xFFFFFFFFFFFFFFFF');
+  static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
 
   @override
   Uint64 construct(TypedDataList<int> newUints) => Uint64(newUints);

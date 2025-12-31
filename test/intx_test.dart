@@ -1,5 +1,6 @@
 import "dart:math";
 
+import "package:sized_ints/helpers.dart";
 import "package:sized_ints/intx.dart";
 import "package:checks/checks.dart";
 import "package:sized_ints/sized_int.dart";
@@ -82,11 +83,9 @@ void testAgainstRandomBigInts<T>(
   for (int i = 0; i < numRuns; i++) {
     BigInt one = biCreator();
     BigInt two = biCreator();
-    print("one: ${one.hex}, two: ${two.hex}");
     int bits = max(one.signedBitLength, two.signedBitLength);
     IntX ione = IntX.fromBigInt(bits, one);
     IntX itwo = IntX.fromBigInt(bits, two);
-    print("bits: $bits, ione: $ione, itwo: $itwo");
     T actual = intXOp(ione, itwo);
     T checked = biOp(one, two);
     check(actual).equals(checked);

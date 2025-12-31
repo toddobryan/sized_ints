@@ -137,6 +137,10 @@ void main() {
       check(-UintX.fromInt(8, 100)).equals(UintX.fromInt(8, 156));
     });
 
+    test("bit-shift operators", () {
+
+    });
+
     test('UintX', () {
       for (int i = 0; i <= 255; i++) {
         for (int j = 0; j <= 255; j++) {
@@ -158,6 +162,7 @@ void main() {
         }
       }
     });
+
   });
 
   // TODO: UintX16, UintX32, UintX64, exceptions
