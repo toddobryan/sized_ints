@@ -2,7 +2,7 @@ import "dart:math" as math;
 import "dart:typed_data";
 
 import "sized_int.dart";
-import "helpers.dart";
+import "config.dart";
 
 /// Value is stored as a big-endian int. If the value is negative,
 /// uint32List.first is padded with 1s.
@@ -10,7 +10,7 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   Int(super.bits, super.uints);
 
   @override
-  int toInt() {
+  int toInt32() {
     if (signBit != 1) {
       return toUnsignedInt();
     } else {
@@ -40,6 +40,12 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     }
   }
 
+  @override
+  int bitLengthOfInt(int i) => i.bitLength + 1;
+
+  @override
+  int bitLengthOfBigInt(BigInt bi) => bi.bitLength + 1;
+
   int? _bitLength;
 
   @override
@@ -58,8 +64,8 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   }
 
   int get signBitMask => (1 << modBitSize(bits)) - 1;
+  @override
   int get signBit => (uints.first & signBitMask) >> (modBitSize(bits) - 1);
-
 
   @override
   TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) {
@@ -84,68 +90,6 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
 
   @override
   String get suffix => "i$bits";
-
-  // Comparison methods
-
-  bool _checkUints(T other, bool Function(int, int) op) {
-    // Have to check zeroth element separately to ignore bits at beginning.
-    if (op(uints[0] % elementMod, other.uints[0] % elementMod)) {
-      return true;
-    } else if (uints[0] % elementMod == other.uints[0] % elementMod) {
-      // continue
-    } else {
-      return false;
-    }
-    for (int i = 1; i < uints.length; i++) {
-      if (op(uints[i], other.uints[i])) {
-        return true;
-      } else if (uints[i] == other.uints[i]) {
-        // continue
-      } else {
-        return false;
-      }
-    }
-    return false;
-  }
-
-  bool _compare(
-    T other,
-    bool negPos,
-    bool posNeg,
-    bool Function(int, int) sameSign,
-  ) {
-    checkBitsAreSame(other);
-    if (signBit == 1 && other.signBit == 0) {
-      return negPos;
-    } else if (signBit == 0 && other.signBit == 1) {
-      return posNeg;
-    } else {
-      return _checkUints(other, sameSign);
-    }
-  }
-
-  bool operator <(T other) => _compare(
-    other,
-    true,
-    false,
-    (int t, int o) => t < o,
-  );
-  bool operator >(T other) => _compare(
-    other,
-    false,
-    true,
-    (int t, int o) => t > o,
-  );
-  bool operator <=(T other) => !(this > other);
-  bool operator >=(T other) => !(this < other);
-
-  // Bit-wise operations
-  T operator ~() {
-    TypedDataList<int> result = flipBits();
-    return construct(result);
-  }
-
-  // Arithmetic
 }
 
 class IntX extends Int<IntX> {

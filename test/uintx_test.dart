@@ -10,14 +10,28 @@ void main() {
   group('uintx', () {
     test('constructor', () {
       UintX twoFiftyFive = UintX.fromInt(8, 255);
-      check(twoFiftyFive.toInt()).equals(255);
+      check(twoFiftyFive.toInt32()).equals(255);
       check(twoFiftyFive.bitLength).equals(8);
       UintX abcd = UintX.fromInt(16, 0xABCD);
-      check(abcd.toInt()).equals(0xABCD);
+      check(abcd.toInt32()).equals(0xABCD);
       check(abcd.bitLength).equals(16);
       UintX bi = UintX.fromBigInt(64, BigInt.parse('0x10203040FFFFFFFF'));
       check(bi.toBigInt()).equals(BigInt.parse('0x10203040FFFFFFFF'));
       check(bi.bitLength).equals(61);
+    });
+
+    test("bit-shift operators", () {
+      UintX three = UintX.fromInt(10, 0x3);
+      check(three << 1).equals(UintX.fromInt(10, 0x6));
+      check(three << 2).equals(UintX.fromInt(10, 0xc));
+      check(three << 3).equals(UintX.fromInt(10, 0x18));
+      check(three << 4).equals(UintX.fromInt(10, 0x30));
+      check(three << 5).equals(UintX.fromInt(10, 0x60));
+      check(three << 6).equals(UintX.fromInt(10, 0xc0));
+      check(three << 7).equals(UintX.fromInt(10, 0x180));
+      check(three << 8).equals(UintX.fromInt(10, 0x300));
+      check(three << 9).equals(UintX.fromInt(10, 0x200));
+      check(three << 10).equals(UintX.fromInt(10, 0));
     });
 
     test('less than', () {
@@ -70,16 +84,17 @@ void main() {
     });
 
     test('subtraction', () {
-      check((UintX.fromInt(8, 255) - UintX.fromInt(8, 251)).toInt()).equals(4);
+      check((UintX.fromInt(8, 255) - UintX.fromInt(8, 251)).toInt32()).equals(4);
       check(
-        (UintX.fromInt(8, 251) - UintX.fromInt(8, 255)).toInt(),
+        (UintX.fromInt(8, 251) - UintX.fromInt(8, 255)).toInt32(),
       ).equals(252);
     });
 
     test('simple multiplication', () {
       UintX a = UintX.fromInt(8, 13);
       UintX b = UintX.fromInt(8, 17);
-      check(a * b).equals(UintX.fromInt(8, 221));
+      UintX prod = a * b;
+      check(a * b).equals(prod);
 
       check(
         UintX.fromInt(32, 65537) * UintX.fromInt(32, 65537),
@@ -137,28 +152,24 @@ void main() {
       check(-UintX.fromInt(8, 100)).equals(UintX.fromInt(8, 156));
     });
 
-    test("bit-shift operators", () {
-
-    });
-
     test('UintX', () {
       for (int i = 0; i <= 255; i++) {
         for (int j = 0; j <= 255; j++) {
           Uint8 a = Uint8.fromInt(i);
           Uint8 b = Uint8.fromInt(j);
-          check((a + b).toInt()).equals((i + j) % 256);
-          check((a - b).toInt()).equals((i - j) % 256);
-          check((a * b).toInt()).equals((i * j) % 256);
+          check((a + b).toInt32()).equals((i + j) % 256);
+          check((a - b).toInt32()).equals((i - j) % 256);
+          check((a * b).toInt32()).equals((i * j) % 256);
           if (j != 0) {
-            check((a ~/ b).toInt()).equals((i ~/ j) % 256);
+            check((a ~/ b).toInt32()).equals((i ~/ j) % 256);
             check(a / b).equals(i / j);
-            check((a % b).toInt()).equals(i % j);
+            check((a % b).toInt32()).equals(i % j);
           }
-          check((a | b).toInt()).equals((i | j) % 256);
-          check((a & b).toInt()).equals((i & j) % 256);
-          check((a ^ b).toInt()).equals((i ^ j) % 256);
-          check((~a).toInt()).equals(~i % 256);
-          check((-a).toInt()).equals((256 - i) % 256);
+          check((a | b).toInt32()).equals((i | j) % 256);
+          check((a & b).toInt32()).equals((i & j) % 256);
+          check((a ^ b).toInt32()).equals((i ^ j) % 256);
+          check((~a).toInt32()).equals(~i % 256);
+          check((-a).toInt32()).equals((256 - i) % 256);
         }
       }
     });

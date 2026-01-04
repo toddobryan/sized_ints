@@ -6,9 +6,9 @@ import 'package:test/test.dart';
 void main() {
   group('Uint8', () {
     test('constructor', () {
-      check(Uint8.fromInt(0).toInt()).equals(0);
-      check(Uint8.fromInt(255).toInt()).equals(255);
-      check(Uint8.fromInt(20).toInt()).equals(20);
+      check(Uint8.fromInt(0).toInt32()).equals(0);
+      check(Uint8.fromInt(255).toInt32()).equals(255);
+      check(Uint8.fromInt(20).toInt32()).equals(20);
       check(() => Uint8.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -93,9 +93,9 @@ void main() {
 
   group('Uint16', () {
     test('constructor', () {
-      check(Uint16.fromInt(0).toInt()).equals(0);
-      check(Uint16.fromInt(255).toInt()).equals(255);
-      check(Uint16.fromInt(20).toInt()).equals(20);
+      check(Uint16.fromInt(0).toInt32()).equals(0);
+      check(Uint16.fromInt(255).toInt32()).equals(255);
+      check(Uint16.fromInt(20).toInt32()).equals(20);
       check(() => Uint16.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -207,9 +207,9 @@ void main() {
 
   group('Uint32', () {
     test('constructor', () {
-      check(Uint32.fromInt(0).toInt()).equals(0);
-      check(Uint32.fromInt(255).toInt()).equals(255);
-      check(Uint32.fromInt(20).toInt()).equals(20);
+      check(Uint32.fromInt(0).toInt32()).equals(0);
+      check(Uint32.fromInt(255).toInt32()).equals(255);
+      check(Uint32.fromInt(20).toInt32()).equals(20);
       check(() => Uint32.fromInt(-5)).throws<ArgumentError>();
     });
 

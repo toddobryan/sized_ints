@@ -1,9 +1,8 @@
 import "dart:math";
 
-import "package:sized_ints/helpers.dart";
+import "package:sized_ints/config.dart";
 import "package:sized_ints/intx.dart";
 import "package:checks/checks.dart";
-import "package:sized_ints/sized_int.dart";
 import "package:test/test.dart";
 
 void main() {
@@ -12,23 +11,27 @@ void main() {
   group("IntX", () {
     test("constructors", () {
       Int sixtyThree = IntX.fromInt(7, 63);
-      check(sixtyThree.toInt()).equals(63);
+      check(sixtyThree.toInt32()).equals(63);
       check(sixtyThree.bitLength).equals(6);
       Int neg512 = IntX.fromInt(10, -512);
       print(neg512.uints);
       print(neg512.toRadixString(2));
       print((~neg512).toRadixString(2));
-      check(neg512.toInt()).equals(-512);
+      check(neg512.toInt32()).equals(-512);
       check(neg512.bitLength).equals(10);
 
       Int neg1 = IntX.fromInt(4, -1);
-      check(neg1.toInt()).equals(-1);
+      check(neg1.toInt32()).equals(-1);
       check(neg1.bitLength).equals(1);
 
       Int max64 = IntX.fromBigInt(64, Int64.maxAsBigInt);
+      print(max64.hex);
       check(max64.toBigInt()).equals(Int64.maxAsBigInt);
       check(max64.bitLength).equals(63);
       Int min64 = IntX.fromBigInt(64, Int64.minAsBigInt);
+      print(min64.hex);
+      print(min64.toBigInt().hex);
+      print(Int64.minAsBigInt.hex);
       check(min64.toBigInt()).equals(Int64.minAsBigInt);
       check(min64.bitLength).equals(64);
     });
@@ -52,6 +55,12 @@ void main() {
     });
 
     test("lessThan", () {
+      IntX x = IntX.fromInt(24, 17);
+      IntX y = IntX.fromInt(24, -8);
+      print(x);
+      print(y);
+      check(x < y).isFalse();
+
       testAgainstRandomBigInts(
         100,
         r,
