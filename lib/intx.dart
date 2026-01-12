@@ -1,6 +1,7 @@
 import "dart:math" as math;
 import "dart:typed_data";
 
+import "helpers.dart";
 import "sized_int.dart";
 import "config.dart";
 
@@ -19,7 +20,7 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
         0,
       );
       TypedDataList<int> list =
-          (uints.sublist(lastIntIndex) as TypedDataList<int>);
+      (uints.sublist(lastIntIndex) as TypedDataList<int>);
       for (int i = 0; i < list.length; i++) {
         list[i] = ~list[i];
       }
@@ -40,12 +41,6 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     }
   }
 
-  @override
-  int bitLengthOfInt(int i) => i.bitLength + 1;
-
-  @override
-  int bitLengthOfBigInt(BigInt bi) => bi.bitLength + 1;
-
   int? _bitLength;
 
   @override
@@ -63,19 +58,19 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
     }
   }
 
-  int get signBitMask => (1 << modBitSize(bits)) - 1;
   @override
-  int get signBit => (uints.first & signBitMask) >> (modBitSize(bits) - 1);
+  int get signBit {
+    int numSpaces = bits % bitsPerListElement - 1;
+    return (uints.first & (1 << numSpaces)) >> numSpaces;
+  }
 
   @override
   TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) {
-    TypedDataList<int> result = listFromInts(list);
     if (signBit == 0) {
-      result[0] = result[0] & positiveMask(bits);
+      return extendZerothElementPositive(list);
     } else {
-      result[0] = result[0] | negativeMask(bits);
+      return extendZerothElementNegative(list);
     }
-    return result;
   }
 
   @override
@@ -92,11 +87,12 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   String get suffix => "i$bits";
 }
 
+
 class IntX extends Int<IntX> {
   IntX._(super.bits, super.uints);
 
   factory IntX.fromInt(int bits, int value) {
-    if (value < Int32.minAsInt || value > Int32.maxAsInt) {
+    if (value < minInt32 || value > maxInt32) {
       throw ArgumentError(
         "value must be in range [-2^31, 2^31 - 1], "
         "use fromBigInt for values outside the range",
@@ -111,8 +107,8 @@ class IntX extends Int<IntX> {
   }
 
   factory IntX.fromBigInt(int bits, BigInt value) {
-    BigInt min = minExpressibleAsBigInt(bits);
-    BigInt max = maxExpressibleAsBigInt(bits);
+    BigInt min = minBigInt(bits);
+    BigInt max = maxBigInt(bits);
     if (value < min || value > max) {
       throw ArgumentError(
         "value can not be represented in the given number of bits",

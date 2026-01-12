@@ -1,6 +1,6 @@
 import "dart:math";
 
-import "package:sized_ints/config.dart";
+import "package:sized_ints/helpers.dart";
 import "package:sized_ints/intx.dart";
 import "package:checks/checks.dart";
 import "package:test/test.dart";

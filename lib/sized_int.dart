@@ -1,7 +1,10 @@
 import "dart:math";
 import "dart:typed_data";
 
+import "package:sized_ints/typed_data_list_mixin.dart";
+
 import "config.dart";
+import "helpers.dart";
 import "intx.dart";
 
 abstract class SizedInt<T extends SizedInt<T>> {
@@ -28,22 +31,21 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   T construct(TypedDataList<int> newUints);
 
-  int elementMod(int bits, int index) {
-    int elementBit = index > 0 ? bits % bitsPerListElement : bitsPerListElement;
-    return 1 << elementBit;
-  }
-
-  int elementMask(int bits, int index) => elementMod(bits, index) - 1;
-
   int get signBit;
 
-  // These should be over-ridden depending on whether the subclass handles
-  // signed or unsigned numbers. The value returned for a signed number should
-  // be one more than an unsigned.
-  int bitLengthOfInt(int i);
-  int bitLengthOfBigInt(BigInt bi);
-
   TypedDataList<int> withZerothElementFixed(TypedDataList<int> list);
+
+  TypedDataList<int> extendZerothElementPositive(TypedDataList<int> list) {
+    TypedDataList<int> result = listFromInts(list);
+    result[0] = result[0] & elementMod(bits, 0);
+    return result;
+  }
+
+  TypedDataList<int> extendZerothElementNegative(TypedDataList<int> list) {
+    TypedDataList<int> result = listFromInts(list);
+    result[0] = result[0] | elementMod(bits, 0);
+    return result;
+  }
 
   int? _bitLength;
 
@@ -52,7 +54,15 @@ abstract class SizedInt<T extends SizedInt<T>> {
     return _bitLength!;
   }
 
-  int calculateBitLength() => uints.bitLength;
+  int calculateBitLength() {
+    for (int i = 0; i < uints.length; i++) {
+      int bl = uints[i].bitLength;
+      if (bl > 0) {
+        return bl + (bitsPerListElement * (uints.length - i - 1));
+      }
+    }
+    return 0;
+  }
 
   int get signedBitLength => bitLength + 1;
 
@@ -61,12 +71,11 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   int toInt32();
 
+  // only works for positive value; overridden in IntX
   BigInt toBigInt() {
-    BigInt elementModAsBigInt = BigInt.from(elementMod(bits, 1));
-    if (signBit == 0) {
-      BigInt value = BigInt.from(uints[0]);
-      for (int i = 1; i < uints.length; i++) {
-        value = (value * elementModAsBigInt) + BigInt.from(uints[i]);
+    BigInt value = BigInt.from(uints[0]);
+    for (int i = 1; i < uints.length; i++) {
+      value = (value * BigInt.from(elementMod(bits, i))) + BigInt.from(uints[i]);
     }
     return value;
   }
@@ -95,16 +104,8 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   String get hex => toRadixString(16);
 
-  // TODO: decide on one binary or the other
-  String get binary {
-    String s = "0b${uints[0].toRadixString(2)}";
-    for (int i = 1; i < uints.length; i++) {
-      s = "${s}_${uints[i].toRadixString(2)}";
-    }
-    return "$s$suffix";
-  }
-
-  String get bin => uints.map((x) => x.toRadixString(2)).join("_");
+  String get bin =>
+      "0b${uints.map((x) => x.toRadixString(2)).join("_")}$suffix";
 
   void checkBitsAreSame(SizedInt other) {
     if (bits != other.bits) {
@@ -133,15 +134,15 @@ abstract class SizedInt<T extends SizedInt<T>> {
   T operator &(T other) => _binaryBinRel(other, (int t, int o) => t & o);
   T operator |(T other) => _binaryBinRel(other, (int t, int o) => t | o);
   T operator ^(T other) => _binaryBinRel(other, (int t, int o) => t ^ o);
-  T operator ~() => construct(uints.withBitsFlipped());
+  T operator ~() => withBitsFlipped();
 
   // Bit-shift operations
   T operator <<(int n) =>
       construct(withZerothElementFixed(listFromInts(uints).shiftedLeft(n)));
-  T operator >>(int n) =>
-      construct(withZerothElementFixed(listFromInts(uints).shiftedRight(n, signBit)));
-  T operator >>>(int n) =>
-      construct(listFromInts(uints).zeroShiftedRight(n));
+  T operator >>(int n) => construct(
+    withZerothElementFixed(listFromInts(uints).shiftedRight(n, signBit)),
+  );
+  T operator >>>(int n) => construct(listFromInts(uints).zeroShiftedRight(n));
 
   // comparison operators
   @override
@@ -187,19 +188,24 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   T operator +(T other) {
     checkBitsAreSame(other);
-    TypedDataList<int> result = uints.plus(other.uints);
-    result = withZerothElementFixed(result);
-    return construct(result);
+    TypedDataList<int> result = newList(uints.length);
+    int carry = 0;
+    for (int i = uints.length - 1; i >= 0; i--) {
+      int sum = uints[i] + other.uints[i] + carry;
+      result[i] = sum % elementMod(bits, i);
+      carry = sum ~/ elementMod(bits, i);
+    }
+    return construct(withZerothElementFixed(result));
   }
 
   T operator -(T other) {
     checkBitsAreSame(other);
-    TypedDataList<int> result = uints.minus(other.uints);
+    TypedDataList<int> result = uints.minus(bits, other.uints);
     result = withZerothElementFixed(result);
     return construct(result);
   }
 
-  T operator -() => construct(withZerothElementFixed(uints.negated()));
+  T operator -() => construct(withZerothElementFixed(uints.negated(bits)));
 
   // Booth's algorithm for signed integer multiplication.
   //
@@ -211,9 +217,9 @@ abstract class SizedInt<T extends SizedInt<T>> {
     int qNPlus1 = 0; // extra LSP for qr
     for (int count = other.bitLength; count > 0; count--) {
       if (qr.last.isOdd && qNPlus1 == 0) {
-        ac = ac.plus(m);
+        ac = ac.plus(bits, m);
       } else if (qr.last.isEven && qNPlus1 == 1) {
-        ac = ac.minus(m);
+        ac = ac.minus(bits, m);
       }
       qNPlus1 = qr.last & 1;
       qr = qr.shiftedRight(1, ac.last & 1);
@@ -252,5 +258,13 @@ abstract class SizedInt<T extends SizedInt<T>> {
       quotient = quotient + (one << count);
     }
     return (quotient, dividend);
+  }
+
+  T withBitsFlipped() {
+    TypedDataList<int> result = newList(uints.length);
+    for (int i = 0; i < uints.length; i++) {
+      result[i] = ~uints[i] & elementMask(bits, i);
+    }
+    return construct(result);
   }
 }

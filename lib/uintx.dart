@@ -1,6 +1,6 @@
 import "dart:typed_data";
 
-import "config.dart";
+import "helpers.dart";
 import "sized_int.dart";
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
@@ -19,17 +19,8 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   String get suffix => "u$bits";
 
   @override
-  TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) {
-    TypedDataList<int> result = listFromInts(list);
-    result[0] = result[0] & positiveMask(bits);
-    return result;
-  }
-
-  @override
-  int bitLengthOfInt(int i) => i.bitLength;
-
-  @override
-  int bitLengthOfBigInt(BigInt bi) => bi.bitLength;
+  TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) =>
+      extendZerothElementPositive(list);
 }
 
 class UintX extends Uint<UintX> {

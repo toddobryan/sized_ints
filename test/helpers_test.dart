@@ -1,11 +1,15 @@
-import "dart:typed_data";
-
 import "package:sized_ints/config.dart";
 import "package:checks/checks.dart";
+import "package:sized_ints/helpers.dart";
 import "package:test/test.dart";
 
 void main() {
-  group("statics", () {
+  test("elementMod", () {
+    check(elementMod(bitsPerListElement + 5, 0)).equals(32);
+    check(elementMod(bitsPerListElement + 5, 2)).equals(1 << bitsPerListElement);
+  });
+
+  /*group("statics", () {
     test("positiveMask", () {
       check(positiveMask(1)).equals(1);
       check(positiveMask(2)).equals(3);
@@ -37,6 +41,6 @@ void main() {
       check(list.withOneAdded()).containsEqualInOrder(listFromInts([15]));
       check(listFromInts([0x7fffffffffffffff]).withOneAdded()).containsEqualInOrder(listFromInts([0]));
     });
-  });
+  });*/
 }
 
