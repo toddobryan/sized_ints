@@ -15,8 +15,8 @@ void main() {
       check(sixtyThree.bitLength).equals(6);
       Int neg512 = IntX.fromInt(10, -512);
       print(neg512.uints);
-      print(neg512.toRadixString(2));
-      print((~neg512).toRadixString(2));
+      print(neg512.hex);
+      print((~neg512).hex);
       check(neg512.toInt32()).equals(-512);
       check(neg512.bitLength).equals(10);
 

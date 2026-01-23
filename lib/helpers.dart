@@ -1,26 +1,32 @@
 import 'dart:typed_data';
 
-import 'package:sized_ints/typed_data_list_mixin.dart';
-
 import 'config.dart';
+import 'typed_data_list_extensions.dart';
 
 final int maxUint32 = 0xFFFFFFFF;
 final int maxInt32 = 0x7FFFFFFF;
 final int minInt32 = -0x80000000;
 
-int bitsMod(int bits) {
-  int numBits = bits % bitsPerListElement;
-  return numBits == 0  ? bitsPerListElement : numBits;
+/// Returns the number of significant bits at the given index of the list
+int bitsMod(int bits, int index) {
+  if (index == 0) {
+    int numBits = bits % Config.bitsPerListElement;
+    return bits % Config.bitsPerListElement == 0
+        ? Config.bitsPerListElement
+        : numBits;
+  } else {
+    return Config.bitsPerListElement;
+  }
 }
 
 int elementMod(int bits, int index) {
-  int numBits = index == 0 ? bitsMod(bits) : bitsPerListElement;
+  int numBits = index == 0 ? bitsMod(bits, index) : Config.bitsPerListElement;
   return 1 << numBits;
 }
 
 int elementMask(int bits, int index) => elementMod(bits, index) - 1;
 
-int expectedUintListLength(int bits) => (bits / bitsPerListElement).ceil();
+int expectedUintListLength(int bits) => (bits / Config.bitsPerListElement).ceil();
 
 int minInt(int bits) {
   if (bits < 1 || bits > 32) {
@@ -74,11 +80,11 @@ TypedDataList<int> unsignedIntToList(int bits, int value) {
   if (bits < value.bitLength) {
     throw ArgumentError('value $value will not fit in $bits bits');
   }
-  TypedDataList<int> list = newList(expectedUintListLength(bits));
+  TypedDataList<int> list = Config.newList(expectedUintListLength(bits));
   int index = list.length - 1;
   while (value > 0) {
     list[index] = value % elementMod(bits, index);
-    value = value >>> bitsPerListElement;
+    value = value >>> Config.bitsPerListElement;
     index--;
   }
   return list;
@@ -91,11 +97,11 @@ TypedDataList<int> unsignedBigIntToList(int bits, BigInt value) {
   if (value.bitLength > bits) {
     throw ArgumentError('value can not be represented in $bits bits');
   }
-  TypedDataList<int> list = newList(expectedUintListLength(bits));
+  TypedDataList<int> list = Config.newList(expectedUintListLength(bits));
   int index = list.length - 1;
   while (value > BigInt.zero) {
     list[index] = (value % BigInt.from(elementMod(bits, index))).toInt();
-    value = value >> bitsPerListElement;
+    value = value >> Config.bitsPerListElement;
     index--;
   }
   return list;
@@ -110,12 +116,12 @@ TypedDataList<int> signedIntToList(int bits, int value) {
   if (bits < value.signedBitLength) {
     throw ArgumentError('value $value will not fit in $bits bits');
   }
-  TypedDataList<int> list = newList(expectedUintListLength(bits));
+  TypedDataList<int> list = Config.newList(expectedUintListLength(bits));
   int absValue = value.abs();
   int index = list.length - 1;
   while (absValue > 0) {
     list[index] = absValue % elementMod(bits, index);
-    absValue = absValue >>> bitsPerListElement;
+    absValue = absValue >>> Config.bitsPerListElement;
     index--;
   }
   if (value < 0) {
@@ -128,12 +134,12 @@ TypedDataList<int> signedBigIntToList(int bits, BigInt value) {
   if (bits < value.signedBitLength) {
     throw ArgumentError('value $value will not fit in $bits bits');
   }
-  TypedDataList<int> list = newList(expectedUintListLength(bits));
+  TypedDataList<int> list = Config.newList(expectedUintListLength(bits));
   BigInt absValue = value.abs();
   int index = list.length - 1;
   while (absValue > BigInt.zero) {
     list[index] = (absValue % BigInt.from(elementMod(bits, index))).toInt();
-    absValue = absValue >> bitsPerListElement;
+    absValue = absValue >> Config.bitsPerListElement;
     index--;
   }
   if (value < BigInt.zero) {

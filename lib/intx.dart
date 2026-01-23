@@ -14,22 +14,25 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   int toInt32() {
     if (signBit != 1) {
       return toUnsignedInt();
-    } else {
-      int lastIntIndex = math.max(
-        uints.length - (32 ~/ bitsPerListElement),
-        0,
+    } else if (signedBitLength > 32) {
+      throw throw RangeError(
+        "not safe to return $this as int, use toBigInt() instead",
       );
-      TypedDataList<int> list =
-      (uints.sublist(lastIntIndex) as TypedDataList<int>);
-      for (int i = 0; i < list.length; i++) {
-        list[i] = ~list[i];
-      }
-      int value = list[0];
-      for (int i = 1; i < list.length; i++) {
-        value = (value << bitsPerListElement) + list[i];
-      }
-      return -(value + 1);
     }
+    int indexWhereLastIntStarts = math.max(
+      uints.length - (32 ~/ Config.bitsPerListElement),
+      0,
+    );
+    TypedDataList<int> list =
+    (uints.sublist(indexWhereLastIntStarts) as TypedDataList<int>);
+    for (int i = 0; i < list.length; i++) {
+      list[i] = ~list[i] & elementMask(bits, i);
+    }
+    int value = list[0];
+    for (int i = 1; i < list.length; i++) {
+      value = (value << Config.bitsPerListElement) + list[i];
+    }
+    return -(value + 1);
   }
 
   @override
@@ -60,18 +63,10 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
 
   @override
   int get signBit {
-    int numSpaces = bits % bitsPerListElement - 1;
-    return (uints.first & (1 << numSpaces)) >> numSpaces;
+    int numSpaces = bitsMod(bits, 0) - 1;
+    return (uints.first & (1 << numSpaces)) == 0 ? 0 : 1;
   }
 
-  @override
-  TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) {
-    if (signBit == 0) {
-      return extendZerothElementPositive(list);
-    } else {
-      return extendZerothElementNegative(list);
-    }
-  }
 
   @override
   String toRadixString(int radix) {

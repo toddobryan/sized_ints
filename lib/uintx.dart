@@ -17,10 +17,6 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
 
   @override
   String get suffix => "u$bits";
-
-  @override
-  TypedDataList<int> withZerothElementFixed(TypedDataList<int> list) =>
-      extendZerothElementPositive(list);
 }
 
 class UintX extends Uint<UintX> {
