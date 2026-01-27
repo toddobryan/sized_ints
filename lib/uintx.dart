@@ -1,29 +1,71 @@
 import "dart:typed_data";
 
-import "helpers.dart";
+import "bit_list.dart";
 import "sized_int.dart";
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
 /// operations. Values are stored as lists of 32-bit non-negative ints,
 /// since those are supported on both native and web
 abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
-  Uint(super.bits, super.uints);
+  Uint(super.bitList);
 
   @override
-  int toInt32() => toUnsignedInt();
+  int toInt32() {
+    if (bitLength > 32) {
+      throw throw RangeError(
+        "not safe to return $this as int, use toBigInt() instead",
+      );
+    }
+    return bitList.toUnsignedInt32();
+  }
+
+  @override
+  BigInt toBigInt() => bitList.toUnsignedBigInt();
 
   @override
   int get signBit => 0;
 
   @override
   String get suffix => "u$bits";
+
+  @override
+  // TODO: don't use BigInt
+  T operator *(T other) {
+    checkCompatible(other);
+    BigInt asBigInt = (toBigInt() * other.toBigInt()) % (BigInt.one << bits);
+    return construct(BitList.fromUnsignedBigInt(bits, asBigInt));
+  }
+
+  @override
+  // TODO: don't use BigInt
+  T operator ~/(T other) {
+    checkCompatible(other);
+    BigInt asBigInt = toBigInt() ~/ other.toBigInt();
+    return construct(BitList.fromUnsignedBigInt(bits, asBigInt));
+  }
+
+  @override
+  // TODO: don't use BigInt
+  T operator %(T other) {
+    checkCompatible(other);
+    BigInt asBigInt = toBigInt() % other.toBigInt();
+    return construct(BitList.fromUnsignedBigInt(bits, asBigInt));
+  }
+
+  @override
+  // TODO: don't use BigInt
+  T remainder(T other) {
+    checkCompatible(other);
+    BigInt asBigInt = toBigInt().remainder(other.toBigInt());
+    return construct(BitList.fromUnsignedBigInt(bits, asBigInt));
+  }
 }
 
 class UintX extends Uint<UintX> {
-  UintX(super.bits, super.uints);
+  UintX(super.bitList);
 
   UintX.fromInt(int bits, int value)
-    : super(bits, unsignedIntToList(bits, value));
+    : super(BitList.fromUnsignedInt(bits, value));
 
   factory UintX.fromBytes(int bits, Uint8List bytes) {
     BigInt value = BigInt.zero;
@@ -35,13 +77,7 @@ class UintX extends Uint<UintX> {
   }
 
   factory UintX.fromBigInt(int bits, BigInt value) {
-    if (value < BigInt.zero || value > maxUnsignedAsBigInt(bits)) {
-      throw ArgumentError(
-        "value must be in range [0, 2^$bits-1], given: $value",
-      );
-    }
-    TypedDataList<int> list = unsignedBigIntToList(bits, value);
-    return UintX(bits, list);
+    return UintX(BitList.fromUnsignedBigInt(bits, value));
   }
 
   factory UintX.parse(int bits, String s) {
@@ -50,64 +86,84 @@ class UintX extends Uint<UintX> {
   }
 
   @override
-  UintX construct(TypedDataList<int> newUints) => UintX(bits, newUints);
+  UintX construct(BitList bitList) {
+    if (bitList.bits != bits) {
+      throw ArgumentError(
+          "expected BitList with $bits bits, "
+              "given: ${bitList.bits} bits"
+      );
+    }
+    return UintX(bitList);
+  }
 }
 
 class Uint8 extends Uint<Uint8> {
-  Uint8(TypedDataList<int> uints) : super(8, uints);
-  Uint8.fromInt(int value) : super(8, unsignedIntToList(8, value));
-  Uint8.fromBytes(Uint8List bytes) : super(8, bytes);
+  Uint8(Uint32List uints) : super(BitList(8, uints));
+  Uint8.fromInt(int value) : super(BitList.fromUnsignedInt(8, value));
 
   static final Uint8 max = Uint8.fromInt(maxAsInt);
   static final int maxAsInt = 0xFF;
 
   @override
-  Uint8 construct(TypedDataList<int> newUints) => Uint8(newUints);
+  Uint8 construct(BitList bitList) => Uint8(bitList.uints);
 }
 
 class Uint16 extends Uint<Uint16> {
-  Uint16(TypedDataList<int> uints) : super(16, uints);
-  Uint16.fromInt(int value) : super(16, unsignedIntToList(16, value));
-  Uint16.fromBytes(Uint8List bytes) : super(16, bytes);
+  Uint16(Uint32List uints) : super(BitList(16, uints));
+  Uint16.fromInt(int value) : super(BitList.fromUnsignedInt(16, value));
 
   static final Uint16 max = Uint16.fromInt(maxAsInt);
   static final int maxAsInt = 0xFFFF;
 
   @override
-  Uint16 construct(TypedDataList<int> newUints) => Uint16(newUints);
+  Uint16 construct(BitList bitList) => Uint16(bitList.uints);
 }
 
 class Uint32 extends Uint<Uint32> {
-  Uint32(TypedDataList<int> uints) : super(32, uints);
-  Uint32.fromInt(int value) : super(32, unsignedIntToList(32, value));
-  Uint32.fromBytes(Uint8List bytes) : super(32, bytes);
+  Uint32(Uint32List uints) : super(BitList(32, uints));
+  Uint32.fromInt(int value) : super(BitList.fromUnsignedInt(32, value));
 
   static final Uint32 max = Uint32.fromInt(maxAsInt);
   static final int maxAsInt = 0xFFFFFFFF;
 
   @override
-  Uint32 construct(TypedDataList<int> newUints) => Uint32(newUints);
+  Uint32 construct(BitList bitList) => Uint32(bitList.uints);
 }
 
 class Uint64 extends Uint<Uint64> {
-  Uint64(TypedDataList<int> uints) : super(64, uints);
-  Uint64.fromInt(int value) : super(64, unsignedIntToList(64, value));
-  Uint64.fromBytes(Uint8List bytes) : super(64, bytes);
+  Uint64(Uint32List uints) : super(BitList(64, uints));
+  Uint64.fromInt(int value) : super(BitList.fromUnsignedInt(64, value));
 
   Uint64.fromBigInt(BigInt value)
-    : super(64, unsignedBigIntToList(64, value));
+    : super(BitList.fromUnsignedBigInt(64, value));
 
   factory Uint64.parse(String value) {
     return Uint64.fromBigInt(BigInt.parse(value.replaceAll("_", "")));
   }
 
-  (int, int) get values => (uints[0], uints[1]);
+  static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
+  static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
+
+  @override
+  Uint64 construct(BitList bitList) => Uint64(bitList.uints);
+}
+
+class Uint128 extends Uint<Uint128> {
+  Uint128(Uint32List uints) : super(BitList(128, uints));
+  Uint128.fromInt(int value) : super(BitList.fromUnsignedInt(128, value));
+
+  Uint128.fromBigInt(BigInt value)
+      : super(BitList.fromUnsignedBigInt(128, value));
+
+  factory Uint128.parse(String value) {
+    return Uint128.fromBigInt(BigInt.parse(value.replaceAll("_", "")));
+  }
 
   static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
   static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
 
   @override
-  Uint64 construct(TypedDataList<int> newUints) => Uint64(newUints);
+  Uint128 construct(BitList bitList) => Uint128(bitList.uints);
 }
 
 extension IntOp on int {

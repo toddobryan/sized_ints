@@ -317,7 +317,9 @@ void main() {
 
   group('Uint64', () {
     test('constructor', () {
-      check(Uint64.fromInt(0).values).equals((0, 0));
+      var int32s = Uint64.fromInt(0).bitList.uints;
+      check(int32s[0]).equals(0);
+      check(int32s[1]).equals(0);
       check(Uint64.parse('0xFFFFFFFF_FFFFFFFF')).equals(Uint64.max);
       check(Uint64.parse('0xFFFFFFFF')).equals(Uint64.fromInt(Uint32.maxAsInt));
       check(Uint64.parse('0xFFFFFFFFFFFFFFFF')).equals(Uint64.max);

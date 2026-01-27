@@ -1,6 +1,6 @@
 import "dart:math";
 
-import "package:sized_ints/helpers.dart";
+import "package:sized_ints/extensions.dart";
 import "package:sized_ints/intx.dart";
 import "package:checks/checks.dart";
 import "package:test/test.dart";
@@ -14,41 +14,49 @@ void main() {
       check(sixtyThree.toInt32()).equals(63);
       check(sixtyThree.bitLength).equals(6);
       Int neg512 = IntX.fromInt(10, -512);
-      print(neg512.uints);
-      print(neg512.hex);
-      print((~neg512).hex);
       check(neg512.toInt32()).equals(-512);
-      check(neg512.bitLength).equals(10);
+      check(neg512.bitLength).equals(9);
 
       Int neg1 = IntX.fromInt(4, -1);
       check(neg1.toInt32()).equals(-1);
-      check(neg1.bitLength).equals(1);
+      check(neg1.bitLength).equals(0);
 
       Int max64 = IntX.fromBigInt(64, Int64.maxAsBigInt);
-      print(max64.hex);
       check(max64.toBigInt()).equals(Int64.maxAsBigInt);
       check(max64.bitLength).equals(63);
       Int min64 = IntX.fromBigInt(64, Int64.minAsBigInt);
-      print(min64.hex);
-      print(min64.toBigInt().hex);
-      print(Int64.minAsBigInt.hex);
       check(min64.toBigInt()).equals(Int64.minAsBigInt);
-      check(min64.bitLength).equals(64);
+      check(min64.bitLength).equals(63);
+    });
+
+    test("simpleAddition", () {
+      Int ten = IntX.fromInt(9, 10);
+      Int fifteen = IntX.fromInt(9, 15);
+      check(ten + fifteen).equals(IntX.fromInt(9, 25));
+      check(ten + -fifteen).equals(IntX.fromInt(9, -5));
+      Int twoFifty = IntX.fromInt(9, 250);
+      Int five = IntX.fromInt(9, 5);
+      check(twoFifty + five).equals(IntX.fromInt(9, 255));
+      Int one = IntX.fromInt(9, 1);
+      check(twoFifty + five + one).equals(IntX.fromInt(9, -256));
+    });
+
+    test("multiplication", () {
+      IntX neg3 = IntX.fromInt(9, -3);
+      IntX pos90 = IntX.fromInt(9, 90);
+      check(neg3 * pos90).equals(IntX.fromInt(9, 242));
+      check(neg3 * -pos90).equals(IntX.fromInt(9, -242));
     });
 
     test("random big ints are encoded correctly", () {
       for (int i = 0; i < 100; i++) {
         BigInt bi1 = randomBigInt(r, 3, (a, b) => a * b);
         BigInt bi2 = randomBigInt(r, 3, (a, b) => a * b);
-        print("one: ${bi1.hex}, two: ${bi2.hex}");
         int bi1Bits = bi1.signedBitLength;
         int bi2Bits = bi2.signedBitLength;
         int bits = max(bi1Bits, bi2Bits);
-        print("bits: ($bi1Bits, $bi2Bits) => $bits");
         IntX ione = IntX.fromBigInt(bits, bi1);
         IntX itwo = IntX.fromBigInt(bits, bi2);
-        print(
-            "ione: ${ione.hex}, itwo: ${itwo.hex}");
         check(ione.toBigInt()).equals(bi1);
         check(itwo.toBigInt()).equals(bi2);
       }
@@ -57,8 +65,6 @@ void main() {
     test("lessThan", () {
       IntX x = IntX.fromInt(24, 17);
       IntX y = IntX.fromInt(24, -8);
-      print(x);
-      print(y);
       check(x < y).isFalse();
 
       testAgainstRandomBigInts(
