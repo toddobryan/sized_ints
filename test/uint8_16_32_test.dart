@@ -7,9 +7,9 @@ import 'package:sized_ints/sized_ints.dart';
 void main() {
   group('Uint8', () {
     test('constructor', () {
-      check(Uint8.fromInt(0).toDartSafeInt()).equals(0);
-      check(Uint8.fromInt(255).toDartSafeInt()).equals(255);
-      check(Uint8.fromInt(20).toDartSafeInt()).equals(20);
+      check(Uint8.fromInt(0).toSafeInt()).equals(0);
+      check(Uint8.fromInt(255).toSafeInt()).equals(255);
+      check(Uint8.fromInt(20).toSafeInt()).equals(20);
       check(() => Uint8.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -94,9 +94,9 @@ void main() {
 
   group('Uint16', () {
     test('constructor', () {
-      check(Uint16.fromInt(0).toDartSafeInt()).equals(0);
-      check(Uint16.fromInt(255).toDartSafeInt()).equals(255);
-      check(Uint16.fromInt(20).toDartSafeInt()).equals(20);
+      check(Uint16.fromInt(0).toSafeInt()).equals(0);
+      check(Uint16.fromInt(255).toSafeInt()).equals(255);
+      check(Uint16.fromInt(20).toSafeInt()).equals(20);
       check(() => Uint16.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -208,9 +208,9 @@ void main() {
 
   group('Uint32', () {
     test('constructor', () {
-      check(Uint32.fromInt(0).toDartSafeInt()).equals(0);
-      check(Uint32.fromInt(255).toDartSafeInt()).equals(255);
-      check(Uint32.fromInt(20).toDartSafeInt()).equals(20);
+      check(Uint32.fromInt(0).toSafeInt()).equals(0);
+      check(Uint32.fromInt(255).toSafeInt()).equals(255);
+      check(Uint32.fromInt(20).toSafeInt()).equals(20);
       check(() => Uint32.fromInt(-5)).throws<ArgumentError>();
     });
 

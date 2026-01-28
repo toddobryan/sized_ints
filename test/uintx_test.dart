@@ -11,10 +11,10 @@ void main() {
   group('uintx', () {
     test('constructor', () {
       UintX twoFiftyFive = UintX.fromInt(8, 255);
-      check(twoFiftyFive.toDartSafeInt()).equals(255);
+      check(twoFiftyFive.toSafeInt()).equals(255);
       check(twoFiftyFive.bitLength).equals(8);
       UintX abcd = UintX.fromInt(16, 0xABCD);
-      check(abcd.toDartSafeInt()).equals(0xABCD);
+      check(abcd.toSafeInt()).equals(0xABCD);
       check(abcd.bitLength).equals(16);
       UintX bi = UintX.fromBigInt(64, BigInt.parse('0x10203040FFFFFFFF'));
       check(bi.toBigInt()).equals(BigInt.parse('0x10203040FFFFFFFF'));
@@ -85,9 +85,9 @@ void main() {
     });
 
     test('subtraction', () {
-      check((UintX.fromInt(8, 255) - UintX.fromInt(8, 251)).toDartSafeInt()).equals(4);
+      check((UintX.fromInt(8, 255) - UintX.fromInt(8, 251)).toSafeInt()).equals(4);
       check(
-        (UintX.fromInt(8, 251) - UintX.fromInt(8, 255)).toDartSafeInt(),
+        (UintX.fromInt(8, 251) - UintX.fromInt(8, 255)).toSafeInt(),
       ).equals(252);
     });
 
@@ -158,19 +158,19 @@ void main() {
         for (int j = 0; j <= 255; j++) {
           Uint8 a = Uint8.fromInt(i);
           Uint8 b = Uint8.fromInt(j);
-          check((a + b).toDartSafeInt()).equals((i + j) % 256);
-          check((a - b).toDartSafeInt()).equals((i - j) % 256);
-          check((a * b).toDartSafeInt()).equals((i * j) % 256);
+          check((a + b).toSafeInt()).equals((i + j) % 256);
+          check((a - b).toSafeInt()).equals((i - j) % 256);
+          check((a * b).toSafeInt()).equals((i * j) % 256);
           if (j != 0) {
-            check((a ~/ b).toDartSafeInt()).equals((i ~/ j) % 256);
+            check((a ~/ b).toSafeInt()).equals((i ~/ j) % 256);
             check(a / b).equals(i / j);
-            check((a % b).toDartSafeInt()).equals(i % j);
+            check((a % b).toSafeInt()).equals(i % j);
           }
-          check((a | b).toDartSafeInt()).equals((i | j) % 256);
-          check((a & b).toDartSafeInt()).equals((i & j) % 256);
-          check((a ^ b).toDartSafeInt()).equals((i ^ j) % 256);
-          check((~a).toDartSafeInt()).equals(~i % 256);
-          check((-a).toDartSafeInt()).equals((256 - i) % 256);
+          check((a | b).toSafeInt()).equals((i | j) % 256);
+          check((a & b).toSafeInt()).equals((i & j) % 256);
+          check((a ^ b).toSafeInt()).equals((i ^ j) % 256);
+          check((~a).toSafeInt()).equals(~i % 256);
+          check((-a).toSafeInt()).equals((256 - i) % 256);
         }
       }
     });

@@ -26,7 +26,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   BigInt toBigInt();
 
-  int toDartSafeInt();
+  int toSafeInt();
 
   double toDouble() => toBigInt().toDouble();
 

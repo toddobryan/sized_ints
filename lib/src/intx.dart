@@ -10,7 +10,7 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   Int(super.bitList);
 
   @override
-  int toDartSafeInt() {
+  int toSafeInt() {
     if (signedBitLength > 32) {
       throw throw RangeError(
         "not safe to return $this as int, use toBigInt() instead",

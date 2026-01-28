@@ -11,14 +11,14 @@ void main() {
   group("IntX", () {
     test("constructors", () {
       IntX sixtyThree = IntX.fromInt(7, 63);
-      check(sixtyThree.toDartSafeInt()).equals(63);
+      check(sixtyThree.toSafeInt()).equals(63);
       check(sixtyThree.bitLength).equals(6);
       IntX neg512 = IntX.fromInt(10, -512);
-      check(neg512.toDartSafeInt()).equals(-512);
+      check(neg512.toSafeInt()).equals(-512);
       check(neg512.bitLength).equals(9);
 
       IntX neg1 = IntX.fromInt(4, -1);
-      check(neg1.toDartSafeInt()).equals(-1);
+      check(neg1.toSafeInt()).equals(-1);
       check(neg1.bitLength).equals(0);
 
       IntX max64 = IntX.fromBigInt(64, Int64.maxAsBigInt);
