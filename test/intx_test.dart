@@ -1,43 +1,43 @@
 import "dart:math";
 
-import "package:sized_ints/extensions.dart";
-import "package:sized_ints/intx.dart";
 import "package:checks/checks.dart";
 import "package:test/test.dart";
+
+import "package:sized_ints/sized_ints.dart";
 
 void main() {
   Random r = Random();
 
   group("IntX", () {
     test("constructors", () {
-      Int sixtyThree = IntX.fromInt(7, 63);
-      check(sixtyThree.toInt32()).equals(63);
+      IntX sixtyThree = IntX.fromInt(7, 63);
+      check(sixtyThree.toDartSafeInt()).equals(63);
       check(sixtyThree.bitLength).equals(6);
-      Int neg512 = IntX.fromInt(10, -512);
-      check(neg512.toInt32()).equals(-512);
+      IntX neg512 = IntX.fromInt(10, -512);
+      check(neg512.toDartSafeInt()).equals(-512);
       check(neg512.bitLength).equals(9);
 
-      Int neg1 = IntX.fromInt(4, -1);
-      check(neg1.toInt32()).equals(-1);
+      IntX neg1 = IntX.fromInt(4, -1);
+      check(neg1.toDartSafeInt()).equals(-1);
       check(neg1.bitLength).equals(0);
 
-      Int max64 = IntX.fromBigInt(64, Int64.maxAsBigInt);
+      IntX max64 = IntX.fromBigInt(64, Int64.maxAsBigInt);
       check(max64.toBigInt()).equals(Int64.maxAsBigInt);
       check(max64.bitLength).equals(63);
-      Int min64 = IntX.fromBigInt(64, Int64.minAsBigInt);
+      IntX min64 = IntX.fromBigInt(64, Int64.minAsBigInt);
       check(min64.toBigInt()).equals(Int64.minAsBigInt);
       check(min64.bitLength).equals(63);
     });
 
     test("simpleAddition", () {
-      Int ten = IntX.fromInt(9, 10);
-      Int fifteen = IntX.fromInt(9, 15);
+      IntX ten = IntX.fromInt(9, 10);
+      IntX fifteen = IntX.fromInt(9, 15);
       check(ten + fifteen).equals(IntX.fromInt(9, 25));
       check(ten + -fifteen).equals(IntX.fromInt(9, -5));
-      Int twoFifty = IntX.fromInt(9, 250);
-      Int five = IntX.fromInt(9, 5);
+      IntX twoFifty = IntX.fromInt(9, 250);
+      IntX five = IntX.fromInt(9, 5);
       check(twoFifty + five).equals(IntX.fromInt(9, 255));
-      Int one = IntX.fromInt(9, 1);
+      IntX one = IntX.fromInt(9, 1);
       check(twoFifty + five + one).equals(IntX.fromInt(9, -256));
     });
 

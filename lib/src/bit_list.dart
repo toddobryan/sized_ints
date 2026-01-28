@@ -55,7 +55,7 @@ class BitList {
     Uint32List result = Uint32List(expectedLength(bits));
     int index = result.length - 1;
     while (value > 0) {
-      result[index] = value % elementMod(bits, index);
+      result[index] = value % _elementMod(bits, index);
       value = value >>> bitsPerListElement;
       index--;
     }
@@ -75,7 +75,7 @@ class BitList {
     Uint32List result = Uint32List(expectedLength(bits));
     int index = result.length - 1;
     while (value > BigInt.zero) {
-      result[index] = (value % BigInt.from(elementMod(bits, index))).toInt();
+      result[index] = (value % BigInt.from(_elementMod(bits, index))).toInt();
       value = value >> bitsPerListElement;
       index--;
     }
@@ -96,7 +96,7 @@ class BitList {
     int absValue = value.abs();
     int index = result.length - 1;
     while (absValue > 0) {
-      result[index] = absValue % elementMod(bits, index);
+      result[index] = absValue % _elementMod(bits, index);
       absValue = absValue >>> bitsPerListElement;
       index--;
     }
@@ -115,7 +115,7 @@ class BitList {
     BigInt absValue = value.abs();
     int index = result.length - 1;
     while (absValue > BigInt.zero) {
-      result[index] = (absValue % BigInt.from(elementMod(bits, index))).toInt();
+      result[index] = (absValue % BigInt.from(_elementMod(bits, index))).toInt();
       absValue = absValue >> bitsPerListElement;
       index--;
     }
@@ -168,12 +168,12 @@ class BitList {
     BigInt value = BigInt.from(uints[0]);
     for (int i = 1; i < uints.length; i++) {
       value =
-          (value * BigInt.from(elementMod(bits, i))) + BigInt.from(uints[i]);
+          (value * BigInt.from(_elementMod(bits, i))) + BigInt.from(uints[i]);
     }
     return value;
   }
 
-  int toUnsignedInt32() {
+  int toUnsignedSafeInt() {
     if (bitLength > 32) {
       throw RangeError(
         "not safe to return $this as int, use toBigInt() instead",
@@ -196,11 +196,11 @@ class BitList {
     }
   }
 
-  int toSignedInt32(int signBit) {
+  int toSignedSafeInt(int signBit) {
     if (signBit == 0) {
-      return toUnsignedInt32();
+      return toUnsignedSafeInt();
     } else {
-      int abs = (-this).toUnsignedInt32();
+      int abs = (-this).toUnsignedSafeInt();
       return -abs;
     }
   }
@@ -226,7 +226,7 @@ class BitList {
   BitList operator ~() {
     Uint32List result = Uint32List(length);
     for (int i = 0; i < length; i++) {
-      result[i] = ~uints[i] & elementMask(bits, i);
+      result[i] = ~uints[i] & _elementMask(bits, i);
     }
     return BitList(bits, result);
   }
@@ -251,7 +251,7 @@ class BitList {
       return copy();
     }
     Uint32List result = Uint32List.fromList(
-      List.generate(length, (i) => signBit == 1 ? elementMask(bits, i) : 0),
+      List.generate(length, (i) => signBit == 1 ? _elementMask(bits, i) : 0),
     );
     if (n >= bits) {
       return BitList(bits, result);
@@ -271,7 +271,7 @@ class BitList {
     int carry = 1;
     Uint32List result = Uint32List.fromList(uints);
     for (int i = length - 1; i >= 0; i--) {
-      result[i] = (uints[i] + carry) & elementMask(bits, i);
+      result[i] = (uints[i] + carry) & _elementMask(bits, i);
       if (result[i] == 0) {
         carry = 1;
       } else {
@@ -290,7 +290,7 @@ class BitList {
     int carry = 0;
     for (int i = length - 1; i >= 0; i--) {
       int sum = uints[i] + other.uints[i] + carry;
-      result[i] = sum & elementMask(bits, i);
+      result[i] = sum & _elementMask(bits, i);
       carry = sum >>> bitsPerListElement;
     }
     return BitList(bits, result);
@@ -322,7 +322,7 @@ class BitList {
     } else {
       int leftShiftedElt = uints[index + numElements] << numBits;
       int plusCarry = leftShiftedElt | carry;
-      int eltMask = elementMask(bits, index);
+      int eltMask = _elementMask(bits, index);
       return plusCarry & eltMask;
     }
   }
@@ -343,7 +343,7 @@ class BitList {
     } else {
       int rightShiftedElt = uints[index - numElements] >>> numBits;
       int plusCarry = rightShiftedElt | carry;
-      int eltMask = elementMask(bits, index);
+      int eltMask = _elementMask(bits, index);
       return plusCarry & eltMask;
     }
   }
@@ -356,74 +356,22 @@ class BitList {
     } else {
       return signBit == 0
           ? uints[index]
-          : (0xFFFF_FFFF << bitsMod(bits, index)) | uints[index];
+          : (0xFFFF_FFFF << _bitsMod(bits, index)) | uints[index];
     }
   }
 
   int _rightCarry(int index, int numElts, int numBits, int signBit) {
     int prevWithPadding =  _valueWithPadding(index - numElts - 1, signBit);
-    int rightShifted =  prevWithPadding << max(0, bitsMod(bits, index) - numBits);
+    int rightShifted =  prevWithPadding << max(0, _bitsMod(bits, index) - numBits);
     return rightShifted;
-  }/* int indexBefore = index - numElts - 1;
-    int valueInIndexBeforeWithPadding = _valueWithPadding(indexBefore, signBit);
-    if (signBit == 0) {
-      valueInIndexBeforeWithPadding = uints[indexBefore];
-    } else {
-
-    }
-
-    if (indexBefore < 0) {
-      // return 0s or 1s
-      if (signBit == 0) {
-        return 0;
-      } else { // signBit == 1
-        int nOnes = (1 << max(bitsMod(bits, index), numBits)) - 1;
-        int carry = nOnes << max(0, (bitsMod(bits, index) - numBits));
-        return carry;
-      }
-    } else if (indexBefore == 0) {
-      // return last bits of uints[0], possibly 1-padded, moved to left
-      if (numBits <= )
-    }
-    if (signBit == 0) {
-      if (index - numElts <= 0) {
-        return 0;
-      } else {
-        if (bitsMod(bits, index - numElts - 1) >= numBits) {
-          return _lastNBits(index - numElts - 1, numBits)
-        }
-      }
-    }
-    int numBitsInCarry = max(bitsMod(bits, index), numBits);
-    // if howFarLeftToMove < 0, we'll move right instead of left
-    int howFarLeftToMove = bitsMod(bits, index) - numBits;
-    if (index - numElts < 0) {
-      return signBit == 0 ? 0 : _nOnes(numBitsInCarry, howFarLeftToMove);
-    } else if (index - numElts == 0) {
-      // have to pad with 1s or 0s (0s happens automatically)
-
-    }
-    if (index - numElts <= 0) {
-      if (signBit == 0) {
-        return 0;
-      } else { // signBit == 1
-        int nOnes = (1 << max(bitsMod(bits, index), numBits)) - 1;
-        int carry = nOnes << max(0, (bitsMod(bits, index) - numBits));
-        return carry;
-      }
-    } else {
-      int lastBits = _lastNBits(index - numElts - 1, numBits);
-      int carry = lastBits << (bitsMod(bits, index) - numBits);
-      return carry;
-    }
-  }*/
+  }
 
   int firstNBits(int index, int n) {
     assert(n <= bitsPerListElement);
     int nOnes = (1 << n) - 1;
-    int movedToFront = nOnes << (bitsMod(bits, index) - n);
+    int movedToFront = nOnes << (_bitsMod(bits, index) - n);
     int bitsInList = uints[index] & movedToFront;
-    int movedToEnd = bitsInList >>> (bitsMod(bits, index) - n);
+    int movedToEnd = bitsInList >>> (_bitsMod(bits, index) - n);
     return movedToEnd;
   }
 
@@ -458,7 +406,7 @@ class BitList {
 }
 
 /// Returns the number of significant bits at the given index of the list
-int bitsMod(int bits, int index) {
+int _bitsMod(int bits, int index) {
   int numBits = bits % BitList.bitsPerListElement;
   if (index == 0 && numBits != 0) {
     return numBits;
@@ -466,9 +414,9 @@ int bitsMod(int bits, int index) {
   return BitList.bitsPerListElement;
 }
 
-int elementMod(int bits, int index) {
-  int numBits = index == 0 ? bitsMod(bits, index) : BitList.bitsPerListElement;
+int _elementMod(int bits, int index) {
+  int numBits = index == 0 ? _bitsMod(bits, index) : BitList.bitsPerListElement;
   return 1 << numBits;
 }
 
-int elementMask(int bits, int index) => elementMod(bits, index) - 1;
+int _elementMask(int bits, int index) => _elementMod(bits, index) - 1;

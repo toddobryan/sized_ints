@@ -1,22 +1,11 @@
 import "dart:typed_data";
 
 import "package:checks/checks.dart";
-import "package:sized_ints/bit_list.dart";
 import "package:test/test.dart";
 
+import "package:sized_ints/sized_ints.dart";
+
 void main() {
-  test("elementMod", () {
-    check(elementMod(BitList.bitsPerListElement + 5, 0)).equals(32);
-    check(elementMod(BitList.bitsPerListElement + 5, 2))
-        .equals(1 << BitList.bitsPerListElement);
-  });
-
-  test("elementMask", () {
-    check(elementMask(BitList.bitsPerListElement + 5, 0)).equals(31);
-    check(elementMask(BitList.bitsPerListElement + 5, 2))
-        .equals((1 << BitList.bitsPerListElement) - 1);
-  });
-
   group("BitList", () {
     BitList zeroOne37 = BitList.ints(37, [0x0015, 0x5555_5555]);
     BitList zo37sl1 = BitList.ints(37, [0x000A, 0xAAAA_AAAA]);

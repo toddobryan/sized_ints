@@ -1,5 +1,10 @@
 import "bit_list.dart";
 
+/// A super-class for fixed-size integer classes that work across all Dart
+/// environments.
+///
+/// Internally, SizedInts are stored using Uint32Lists, which should be
+/// safe for native, JS, and wasm backends.
 abstract class SizedInt<T extends SizedInt<T>> {
   final BitList bitList;
 
@@ -21,7 +26,9 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   BigInt toBigInt();
 
-  int toInt32();
+  int toDartSafeInt();
+
+  double toDouble() => toBigInt().toDouble();
 
   String get suffix;
 
@@ -35,8 +42,8 @@ abstract class SizedInt<T extends SizedInt<T>> {
       _ => ("", "__${radix}__$suffix"),
     };
     String num = signBit == 0
-        ? bitList.toRadixString(radix)
-        : (-bitList).toRadixString(radix);
+        ? bitList.toRadixString(radix).toUpperCase()
+        : (-bitList).toRadixString(radix).toUpperCase();
     return "$pre$maybeMinus$num$suf";
   }
 
@@ -126,9 +133,6 @@ abstract class SizedInt<T extends SizedInt<T>> {
   }
 
   T operator -() => construct(-bitList);
-
-  // TODO: don't rely on BigInt
-
 
   /// Convert both to double (with possible loss of precision)
   /// and divide

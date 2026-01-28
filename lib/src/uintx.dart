@@ -10,13 +10,13 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
   Uint(super.bitList);
 
   @override
-  int toInt32() {
+  int toDartSafeInt() {
     if (bitLength > 32) {
       throw throw RangeError(
         "not safe to return $this as int, use toBigInt() instead",
       );
     }
-    return bitList.toUnsignedInt32();
+    return bitList.toUnsignedSafeInt();
   }
 
   @override
@@ -125,6 +125,8 @@ class Uint32 extends Uint<Uint32> {
 
   static final Uint32 max = Uint32.fromInt(maxAsInt);
   static final int maxAsInt = 0xFFFFFFFF;
+  static final Uint32 zero = Uint32.fromInt(0);
+  static final Uint32 one = Uint32.fromInt(1);
 
   @override
   Uint32 construct(BitList bitList) => Uint32(bitList.uints);

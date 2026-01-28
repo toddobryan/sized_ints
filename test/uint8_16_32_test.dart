@@ -1,14 +1,15 @@
 import 'dart:math';
-import 'package:sized_ints/uintx.dart';
 import 'package:checks/checks.dart';
 import 'package:test/test.dart';
+
+import 'package:sized_ints/sized_ints.dart';
 
 void main() {
   group('Uint8', () {
     test('constructor', () {
-      check(Uint8.fromInt(0).toInt32()).equals(0);
-      check(Uint8.fromInt(255).toInt32()).equals(255);
-      check(Uint8.fromInt(20).toInt32()).equals(20);
+      check(Uint8.fromInt(0).toDartSafeInt()).equals(0);
+      check(Uint8.fromInt(255).toDartSafeInt()).equals(255);
+      check(Uint8.fromInt(20).toDartSafeInt()).equals(20);
       check(() => Uint8.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -93,9 +94,9 @@ void main() {
 
   group('Uint16', () {
     test('constructor', () {
-      check(Uint16.fromInt(0).toInt32()).equals(0);
-      check(Uint16.fromInt(255).toInt32()).equals(255);
-      check(Uint16.fromInt(20).toInt32()).equals(20);
+      check(Uint16.fromInt(0).toDartSafeInt()).equals(0);
+      check(Uint16.fromInt(255).toDartSafeInt()).equals(255);
+      check(Uint16.fromInt(20).toDartSafeInt()).equals(20);
       check(() => Uint16.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -207,9 +208,9 @@ void main() {
 
   group('Uint32', () {
     test('constructor', () {
-      check(Uint32.fromInt(0).toInt32()).equals(0);
-      check(Uint32.fromInt(255).toInt32()).equals(255);
-      check(Uint32.fromInt(20).toInt32()).equals(20);
+      check(Uint32.fromInt(0).toDartSafeInt()).equals(0);
+      check(Uint32.fromInt(255).toDartSafeInt()).equals(255);
+      check(Uint32.fromInt(20).toDartSafeInt()).equals(20);
       check(() => Uint32.fromInt(-5)).throws<ArgumentError>();
     });
 
@@ -317,9 +318,6 @@ void main() {
 
   group('Uint64', () {
     test('constructor', () {
-      var int32s = Uint64.fromInt(0).bitList.uints;
-      check(int32s[0]).equals(0);
-      check(int32s[1]).equals(0);
       check(Uint64.parse('0xFFFFFFFF_FFFFFFFF')).equals(Uint64.max);
       check(Uint64.parse('0xFFFFFFFF')).equals(Uint64.fromInt(Uint32.maxAsInt));
       check(Uint64.parse('0xFFFFFFFFFFFFFFFF')).equals(Uint64.max);

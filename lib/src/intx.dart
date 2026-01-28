@@ -10,13 +10,13 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   Int(super.bitList);
 
   @override
-  int toInt32() {
+  int toDartSafeInt() {
     if (signedBitLength > 32) {
       throw throw RangeError(
         "not safe to return $this as int, use toBigInt() instead",
       );
     }
-    return bitList.toSignedInt32(signBit);
+    return bitList.toSignedSafeInt(signBit);
   }
 
   @override
@@ -158,6 +158,8 @@ class Int64 extends Int<Int64> {
   static Int64 min = Int64.fromBigInt(minAsBigInt);
   static BigInt maxAsBigInt = parseWithUnderscores("0x7FFF_FFFF_FFFF_FFFF");
   static Int64 max = Int64.fromBigInt(maxAsBigInt);
+  static Int64 zero = Int64.fromInt(0);
+  static Int64 one = Int64.fromInt(1);
 }
 
 class Int128 extends Int<Int128> {
