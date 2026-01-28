@@ -103,6 +103,8 @@ class Uint8 extends Uint<Uint8> {
 
   static final Uint8 max = Uint8.fromInt(maxAsInt);
   static final int maxAsInt = 0xFF;
+  static final Uint8 zero = Uint8.fromInt(0);
+  static final Uint8 one = Uint8.fromInt(1);
 
   @override
   Uint8 construct(BitList bitList) => Uint8(bitList.uints);
@@ -114,6 +116,8 @@ class Uint16 extends Uint<Uint16> {
 
   static final Uint16 max = Uint16.fromInt(maxAsInt);
   static final int maxAsInt = 0xFFFF;
+  static final Uint16 zero = Uint16.fromInt(0);
+  static final Uint16 one = Uint16.fromInt(1);
 
   @override
   Uint16 construct(BitList bitList) => Uint16(bitList.uints);
@@ -145,6 +149,8 @@ class Uint64 extends Uint<Uint64> {
 
   static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
   static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
+  static final Uint64 zero = Uint64.fromInt(0);
+  static final Uint64 one = Uint64.fromInt(1);
 
   @override
   Uint64 construct(BitList bitList) => Uint64(bitList.uints);
@@ -163,6 +169,8 @@ class Uint128 extends Uint<Uint128> {
 
   static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
   static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
+  static final Uint128 zero = Uint128.fromInt(0);
+  static final Uint128 one = Uint128.fromInt(1);
 
   @override
   Uint128 construct(BitList bitList) => Uint128(bitList.uints);
