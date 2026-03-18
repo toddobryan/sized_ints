@@ -321,9 +321,10 @@ void main() {
       check(Uint64.parse('0xFFFFFFFF_FFFFFFFF')).equals(Uint64.max);
       check(Uint64.parse('0xFFFFFFFF')).equals(Uint64.fromInt(Uint32.maxAsInt));
       check(Uint64.parse('0xFFFFFFFFFFFFFFFF')).equals(Uint64.max);
-      check(() => Uint64.fromInt(pow(2, 51) as int)).throws<ArgumentError>();
+      check(
+        Uint64.fromInt(pow(2, 53) as int),
+      ).equals(Uint64.fromInt(9007199254740992));
       check(() => Uint64.fromInt(-3)).throws<ArgumentError>();
-      check(() => Uint64.fromInt(Uint32.maxAsInt + 1)).throws<ArgumentError>();
       check(() => Uint64.parse('-27')).throws<ArgumentError>();
     });
 

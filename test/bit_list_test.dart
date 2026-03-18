@@ -14,10 +14,12 @@ void main() {
     BitList zo37sl20 = BitList.ints(37, [0x0015, 0x5550_0000]);
 
     test("toString", () {
-      check(zeroOne37.toString())
-          .equals("BitList.ints(37, [0x0015, 0x5555_5555])");
-      check(zo37sl1.toString())
-          .equals("BitList.ints(37, [0x000A, 0xAAAA_AAAA])");
+      check(
+        zeroOne37.toString(),
+      ).equals("BitList.ints(37, [0x0015, 0x5555_5555])");
+      check(
+        zo37sl1.toString(),
+      ).equals("BitList.ints(37, [0x000A, 0xAAAA_AAAA])");
     });
 
     test("shiftedLeftOddBreak", () {
@@ -47,40 +49,70 @@ void main() {
       }
     });
 
-
     test("zeroShiftedRight", () {
       check(zeroOne37.zeroShiftedRight(0)).equals(zeroOne37);
       check(zeroOne37.zeroShiftedRight(37)).equals(BitList.ints(37, [0, 0]));
-      check(zeroOne37.zeroShiftedRight(1))
-          .equals(BitList.ints(37, [0x000A, 0xAAAA_AAAA]));
-      check(zeroOne37.zeroShiftedRight(2))
-          .equals(BitList.ints(37, [0x0005, 0x5555_5555]));
-      check(zeroOne37.zeroShiftedRight(3))
-          .equals(BitList.ints(37, [0x0002, 0xAAAA_AAAA]));
-      check(zeroOne37.zeroShiftedRight(5))
-          .equals(BitList.ints(37, [0x0, 0xAAAA_AAAA]));
-      check(zeroOne37.zeroShiftedRight(8))
-          .equals(BitList.ints(37, [0x0, 0x1555_5555]));
+      check(
+        zeroOne37.zeroShiftedRight(1),
+      ).equals(BitList.ints(37, [0x000A, 0xAAAA_AAAA]));
+      check(
+        zeroOne37.zeroShiftedRight(2),
+      ).equals(BitList.ints(37, [0x0005, 0x5555_5555]));
+      check(
+        zeroOne37.zeroShiftedRight(3),
+      ).equals(BitList.ints(37, [0x0002, 0xAAAA_AAAA]));
+      check(
+        zeroOne37.zeroShiftedRight(5),
+      ).equals(BitList.ints(37, [0x0, 0xAAAA_AAAA]));
+      check(
+        zeroOne37.zeroShiftedRight(8),
+      ).equals(BitList.ints(37, [0x0, 0x1555_5555]));
     });
 
     test("shiftedRight with signBit", () {
       check(zeroOne37.shiftedRight(0, 1)).equals(zeroOne37);
       check(zeroOne37.zeroShiftedRight(37)).equals(BitList.ints(37, [0, 0]));
-      check(zeroOne37.shiftedRight(1, 1))
-          .equals(BitList.ints(37, [0x001A, 0xAAAA_AAAA]));
-      check(zeroOne37.shiftedRight(2, 1))
-          .equals(BitList.ints(37, [0x001D, 0x5555_5555]));
-      check(zeroOne37.shiftedRight(3, 1))
-          .equals(BitList.ints(37, [0x001E, 0xAAAA_AAAA]));
-      check(zeroOne37.shiftedRight(5, 1))
-          .equals(BitList.ints(37, [0x001F, 0xAAAA_AAAA]));
-      check(zeroOne37.shiftedRight(8, 1))
-          .equals(BitList.ints(37, [0x001F, 0xF555_5555]));
-      check(zeroOne37.shiftedRight(12, 1))
-          .equals(BitList.ints(37, [0x001F, 0xFF55_5555]));
-      check(zeroOne37.shiftedRight(13, 1))
-          .equals(BitList.ints(37, [0x001F, 0xFFAA_AAAA]));
+      check(
+        zeroOne37.shiftedRight(1, 1),
+      ).equals(BitList.ints(37, [0x001A, 0xAAAA_AAAA]));
+      check(
+        zeroOne37.shiftedRight(2, 1),
+      ).equals(BitList.ints(37, [0x001D, 0x5555_5555]));
+      check(
+        zeroOne37.shiftedRight(3, 1),
+      ).equals(BitList.ints(37, [0x001E, 0xAAAA_AAAA]));
+      check(
+        zeroOne37.shiftedRight(5, 1),
+      ).equals(BitList.ints(37, [0x001F, 0xAAAA_AAAA]));
+      check(
+        zeroOne37.shiftedRight(8, 1),
+      ).equals(BitList.ints(37, [0x001F, 0xF555_5555]));
+      check(
+        zeroOne37.shiftedRight(12, 1),
+      ).equals(BitList.ints(37, [0x001F, 0xFF55_5555]));
+      check(
+        zeroOne37.shiftedRight(13, 1),
+      ).equals(BitList.ints(37, [0x001F, 0xFFAA_AAAA]));
+    });
+
+    test("get bit for lots", () {
+      BitList eights = BitList.ints(128, [
+        0x8888_8888,
+        0x8888_8888,
+        0x8888_8888,
+        0x8888_8888,
+      ]);
+      for (int i = 0; i < 128; i++) {
+        check(eights.bit(i)).equals(i % 4 == 3 ? 1 : 0);
+      }
+      check(() => eights.bit(128))
+          .throws<ArgumentError>()
+          .has((e) => e.message, "message")
+          .equals("n must be in range [0, 128), but given 128");
+      check(() => eights.bit(-1))
+          .throws<ArgumentError>()
+          .has((e) => e.message, "message")
+          .equals("n must be in range [0, 128), but given -1");
     });
   });
 }
-

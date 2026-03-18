@@ -2,6 +2,7 @@ import "dart:typed_data";
 
 import "bit_list.dart";
 import "extensions.dart";
+import "safe_int/env_for_safe_int.dart";
 import "sized_int.dart";
 
 /// Value is stored as a big-endian int. If the value is negative,
@@ -11,12 +12,12 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
 
   @override
   int toSafeInt() {
-    if (signedBitLength > 32) {
-      throw throw RangeError(
+    if (signedBitLength > EnvForSafeInt.current.maxBitLength) {
+      throw RangeError(
         "not safe to return $this as int, use toBigInt() instead",
       );
     }
-    return bitList.toSignedSafeInt(signBit);
+    return bitList.toSignedInt(signBit);
   }
 
   @override
@@ -73,11 +74,11 @@ abstract class Int<T extends Int<T>> extends SizedInt<T> {
   }
 }
 
-
 class IntX extends Int<IntX> {
   IntX._(super.bitList);
 
-  factory IntX.fromInt(int bits, int value) => IntX._(BitList.fromSignedInt(bits, value));
+  factory IntX.fromInt(int bits, int value) =>
+      IntX._(BitList.fromSignedInt(bits, value));
 
   factory IntX.fromBigInt(int bits, BigInt value) =>
       IntX._(BitList.fromSignedBigInt(bits, value));
@@ -90,8 +91,8 @@ class IntX extends Int<IntX> {
   IntX construct(BitList bitList) {
     if (bitList.bits != bits) {
       throw ArgumentError(
-          "expected BitList with $bits bits, "
-              "given: ${bitList.bits} bits"
+        "expected BitList with $bits bits, "
+        "given: ${bitList.bits} bits",
       );
     }
     return IntX._(bitList);
@@ -109,6 +110,8 @@ class Int8 extends Int<Int8> {
   static Int8 max = Int8.fromInt(maxAsInt);
   static int minAsInt = -128;
   static Int8 min = Int8.fromInt(minAsInt);
+  static Int8 one = Int8.fromInt(1);
+  static Int8 zero = Int8.fromInt(0);
 }
 
 class Int16 extends Int<Int16> {
@@ -122,6 +125,8 @@ class Int16 extends Int<Int16> {
   static Int16 max = Int16.fromInt(maxAsInt);
   static int minAsInt = -0x8000;
   static Int16 min = Int16.fromInt(minAsInt);
+  static Int16 one = Int16.fromInt(1);
+  static Int16 zero = Int16.fromInt(0);
 }
 
 class Int32 extends Int<Int32> {
@@ -133,13 +138,15 @@ class Int32 extends Int<Int32> {
 
   Int32.fromBigInt(BigInt value) : super(BitList.fromSignedBigInt(32, value));
 
-  Int32.parse(String value) :
-        super(BitList.fromSignedBigInt(32, parseWithUnderscores(value)));
+  Int32.parse(String value)
+    : super(BitList.fromSignedBigInt(32, parseWithUnderscores(value)));
 
   static int maxAsInt = 0x7FFFFFFF;
   static Int32 max = Int32.fromInt(maxAsInt);
   static int minAsInt = -0x80000000;
   static Int32 min = Int32.fromInt(minAsInt);
+  static Int32 one = Int32.fromInt(1);
+  static Int32 zero = Int32.fromInt(0);
 }
 
 class Int64 extends Int<Int64> {
@@ -158,6 +165,8 @@ class Int64 extends Int<Int64> {
   static Int64 min = Int64.fromBigInt(minAsBigInt);
   static BigInt maxAsBigInt = parseWithUnderscores("0x7FFF_FFFF_FFFF_FFFF");
   static Int64 max = Int64.fromBigInt(maxAsBigInt);
+  static Int64 minInt32 = Int64.fromInt(Int32.minAsInt);
+  static Int64 maxInt32 = Int64.fromInt(Int32.maxAsInt);
   static Int64 zero = Int64.fromInt(0);
   static Int64 one = Int64.fromInt(1);
 }
@@ -172,7 +181,7 @@ class Int128 extends Int<Int128> {
   Int128.fromBigInt(BigInt value) : super(BitList.fromSignedBigInt(128, value));
 
   Int128.parse(String value)
-      : super(BitList.fromSignedBigInt(128, parseWithUnderscores(value)));
+    : super(BitList.fromSignedBigInt(128, parseWithUnderscores(value)));
 
   static BigInt minAsBigInt = -(BigInt.one << 127);
   static Int128 min = Int128.fromBigInt(minAsBigInt);

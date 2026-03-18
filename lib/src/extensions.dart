@@ -5,6 +5,7 @@ extension BigIntOp on BigInt {
 
 extension IntOp on int {
   int get signedBitLength => bitLength + 1;
+  String get hex => toRadixString(16);
 }
 
 BigInt parseWithUnderscores(String value) =>

@@ -1,6 +1,7 @@
 import "dart:typed_data";
 
 import "bit_list.dart";
+import "safe_int/env_for_safe_int.dart";
 import "sized_int.dart";
 
 /// Unsigned int of arbitrary bit-length with wraparound for all arithmetic
@@ -11,12 +12,12 @@ abstract class Uint<T extends Uint<T>> extends SizedInt<T> {
 
   @override
   int toSafeInt() {
-    if (bitLength > 32) {
+    if (bitLength > EnvForSafeInt.current.maxBitLength) {
       throw throw RangeError(
         "not safe to return $this as int, use toBigInt() instead",
       );
     }
-    return bitList.toUnsignedSafeInt();
+    return bitList.toUnsignedInt();
   }
 
   @override
@@ -174,12 +175,4 @@ class Uint128 extends Uint<Uint128> {
 
   @override
   Uint128 construct(BitList bitList) => Uint128(bitList.uints);
-}
-
-extension IntOp on int {
-  String get hex => toRadixString(16);
-
-  bool get safeCrossPlatform => bitLength <= 32;
-
-  bool get safeUnsigned => safeCrossPlatform && this >= 0;
 }

@@ -4,13 +4,16 @@ import "dart:typed_data";
 import "package:collection/collection.dart";
 
 import "extensions.dart";
+import "safe_int/env_for_safe_int.dart";
 
 ListEquality<int> leq = ListEquality();
 
 class BitList {
   final int bits;
+  // note that these are coupled, if bitsPerListElement were changed to
+  // 16 or 64, the type of uints would need to be Uint16List or Uint64List,
+  // for example
   final Uint32List uints;
-
   static const bitsPerListElement = 32;
 
   BitList._(this.bits, this.uints);
@@ -23,12 +26,12 @@ class BitList {
     if (expectedLength != uints.length) {
       throw ArgumentError(
         "uints argument must have length of $expectedLength, "
-            "given: ${uints.length}",
+        "given: ${uints.length}",
       );
     } else if (uints.any((elt) => elt.bitLength > bitsPerListElement)) {
       throw ArgumentError(
         "Max bit length of all elements in list must "
-            "be <= $bitsPerListElement",
+        "be <= $bitsPerListElement",
       );
     }
     return BitList._(bits, uints);
@@ -43,15 +46,11 @@ class BitList {
   }
 
   factory BitList.fromUnsignedInt(int bits, int value) {
-    if (value < 0 || value > 0xFFFF_FFFF) {
-      throw ArgumentError(
-          "value must be in range [0, 2^32-1], given: $value; "
-              "use fromUnsignedBigInt for values outside the range"
-      );
+    if (value < 0) {
+      throw ArgumentError("value must be >= 0, given: $value");
     }
-    if (bits < value.bitLength) {
-      throw ArgumentError("value $value will not fit in $bits bits");
-    }
+    _checkIntSafeForPlatform(value);
+    _checkIntFitsInGivenBits(bits, value, isSigned: false);
     Uint32List result = Uint32List(expectedLength(bits));
     int index = result.length - 1;
     while (value > 0) {
@@ -66,12 +65,7 @@ class BitList {
     if (value < BigInt.zero) {
       throw ArgumentError("value must be >= 0, given: $value");
     }
-    if (value.bitLength > bits) {
-      throw ArgumentError(
-          "value can not be represented in $bits bits;"
-          "must be in range [0, ${(BigInt.one << bits) - BigInt.one}]",
-      );
-    }
+    _checkBigIntFitsInGivenBits(bits, value, isSigned: false);
     Uint32List result = Uint32List(expectedLength(bits));
     int index = result.length - 1;
     while (value > BigInt.zero) {
@@ -83,12 +77,8 @@ class BitList {
   }
 
   factory BitList.fromSignedInt(int bits, int value) {
-    if (value < -0x8000_0000 || value > 0x7FFF_FFFF) {
-      throw ArgumentError(
-        "value must be in range [-2^31, 2^31-1], given: $value;"
-            "use fromSignedBigInt for values outside the range",
-      );
-    }
+    _checkIntSafeForPlatform(value);
+    _checkIntFitsInGivenBits(bits, value, isSigned: true);
     if (bits < value.signedBitLength) {
       throw ArgumentError("value $value will not fit in $bits bits");
     }
@@ -108,14 +98,13 @@ class BitList {
   }
 
   factory BitList.fromSignedBigInt(int bits, BigInt value) {
-    if (bits < value.signedBitLength) {
-      throw ArgumentError("value $value will not fit in $bits bits");
-    }
+    _checkBigIntFitsInGivenBits(bits, value, isSigned: true);
     Uint32List result = Uint32List(expectedLength(bits));
     BigInt absValue = value.abs();
     int index = result.length - 1;
     while (absValue > BigInt.zero) {
-      result[index] = (absValue % BigInt.from(_elementMod(bits, index))).toInt();
+      result[index] = (absValue % BigInt.from(_elementMod(bits, index)))
+          .toInt();
       absValue = absValue >> bitsPerListElement;
       index--;
     }
@@ -137,8 +126,10 @@ class BitList {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is BitList && runtimeType == other.runtimeType &&
-              bits == other.bits && leq.equals(uints, other.uints);
+      other is BitList &&
+          runtimeType == other.runtimeType &&
+          bits == other.bits &&
+          leq.equals(uints, other.uints);
 
   @override
   int get hashCode => Object.hash(bits, leq.hash(uints));
@@ -162,6 +153,16 @@ class BitList {
   bool get isNonZero => uints.any((x) => x != 0);
   bool get isZero => !isNonZero;
 
+  /// Finds the nth bit in this BitList, 0-indexed, counting from the right
+  int bit(int n) {
+    if (n < 0 || n >= bitLength) {
+      throw ArgumentError("n must be in range [0, $bitLength), but given $n");
+    }
+    int index = n ~/ bitsPerListElement;
+    int bitIndex = n - (bitsPerListElement * index);
+    return (uints[index] & (1 << bitIndex)) >>> bitIndex;
+  }
+
   String toRadixString(int radix) => toUnsignedBigInt().toRadixString(radix);
 
   BigInt toUnsignedBigInt() {
@@ -173,13 +174,12 @@ class BitList {
     return value;
   }
 
-  int toUnsignedSafeInt() {
-    if (bitLength > 32) {
-      throw RangeError(
-        "not safe to return $this as int, use toBigInt() instead",
-      );
-    }
-    int lastIntIndex = max(uints.length - (32 ~/ bitsPerListElement), 0);
+  // may be unsafe, should check for platform safety before calling
+  int toUnsignedInt() {
+    int lastIntIndex = max(
+      uints.length - (EnvForSafeInt.current.maxBitLength ~/ bitsPerListElement),
+      0,
+    );
     int value = uints[lastIntIndex];
     for (int i = lastIntIndex + 1; i < uints.length; i++) {
       value = (value << bitsPerListElement) + uints[i];
@@ -196,17 +196,18 @@ class BitList {
     }
   }
 
-  int toSignedSafeInt(int signBit) {
+  // may be unsafe, should check for Platform safety before calling
+  int toSignedInt(int signBit) {
     if (signBit == 0) {
-      return toUnsignedSafeInt();
+      return toUnsignedInt();
     } else {
-      int abs = (-this).toUnsignedSafeInt();
+      int abs = (-this).toUnsignedInt();
       return -abs;
     }
   }
 
   BitList _binaryBinOp(BitList other, int Function(int, int) op) {
-    assert(bits == other.bits);
+    _checkSameNumberOfBits(this, other);
     Uint32List result = Uint32List(length);
     for (int i = 0; i < length; i++) {
       result[i] = op(uints[i], other.uints[i]);
@@ -262,8 +263,7 @@ class BitList {
     return BitList(bits, result);
   }
 
-  BitList zeroShiftedRight(int n) =>
-      shiftedRight(n, 0);
+  BitList zeroShiftedRight(int n) => shiftedRight(n, 0);
 
   BitList operator -() => (~this).withOneAdded();
 
@@ -282,9 +282,7 @@ class BitList {
   }
 
   BitList operator +(BitList other) {
-    assert(bits == other
-        .bits, "Should have the same number of bits, given $bits and ${other
-        .bits}");
+    _checkSameNumberOfBits(this, other);
 
     Uint32List result = Uint32List(length);
     int carry = 0;
@@ -361,13 +359,17 @@ class BitList {
   }
 
   int _rightCarry(int index, int numElts, int numBits, int signBit) {
-    int prevWithPadding =  _valueWithPadding(index - numElts - 1, signBit);
-    int rightShifted =  prevWithPadding << max(0, _bitsMod(bits, index) - numBits);
+    int prevWithPadding = _valueWithPadding(index - numElts - 1, signBit);
+    int rightShifted =
+        prevWithPadding << max(0, _bitsMod(bits, index) - numBits);
     return rightShifted;
   }
 
+  // finds the first n bits in uints[index]
   int firstNBits(int index, int n) {
-    assert(n <= bitsPerListElement);
+    if (n > bitsPerListElement) {
+      throw ArgumentError("n should be <= $bitsPerListElement, given $n");
+    }
     int nOnes = (1 << n) - 1;
     int movedToFront = nOnes << (_bitsMod(bits, index) - n);
     int bitsInList = uints[index] & movedToFront;
@@ -384,7 +386,7 @@ class BitList {
     String vals = uints.map((int x) => _hexFormat(x)).join(", ");
     return "BitList.ints($bits, [$vals])";
   }
-  
+
   String _hexFormat(int x) {
     String formattedNum = _insertUnderscoresFromRight(x.toRadixString(16));
     return "0x${formattedNum.toUpperCase()}";
@@ -403,6 +405,53 @@ class BitList {
     buffer.write(leadingZeros);
     return buffer.toString().split("").reversed.join("");
   }
+
+  static void _checkIntSafeForPlatform(int value) {
+    if (value < EnvForSafeInt.current.minInteger ||
+        value > EnvForSafeInt.current.maxInteger) {
+      throw ArgumentError(
+        "value $value is not in the safe int range for the current platform",
+      );
+    }
+  }
+
+  static void _checkIntFitsInGivenBits(
+      int bits,
+      int value, {
+        required bool isSigned,
+      }) {
+    int valueBitLength = isSigned ? value.signedBitLength : value.bitLength;
+    if (bits < valueBitLength) {
+      throw ArgumentError(
+        "value can not be represented in $bits bits "
+            "(needs $valueBitLength bits)",
+      );
+    }
+  }
+
+  static void _checkBigIntFitsInGivenBits(
+      int bits,
+      BigInt value, {
+        required bool isSigned,
+      }) {
+    int valueBitLength = isSigned ? value.signedBitLength : value.bitLength;
+    if (bits < valueBitLength) {
+      throw ArgumentError(
+        "value can not be represented in $bits bits "
+            "(needs $valueBitLength bits)",
+      );
+    }
+  }
+
+  static void _checkSameNumberOfBits(BitList one, BitList other) {
+    if (one.bits != other.bits) {
+      throw ArgumentError(
+        "both BitLists should have the same number of bits; "
+            "given ${one.bits} and ${other.bits}, respectively",
+      );
+    }
+  }
+
 }
 
 /// Returns the number of significant bits at the given index of the list

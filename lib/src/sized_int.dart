@@ -24,6 +24,8 @@ abstract class SizedInt<T extends SizedInt<T>> {
 
   bool get isZero => !isNonZero;
 
+
+
   BigInt toBigInt();
 
   int toSafeInt();
