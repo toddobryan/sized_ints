@@ -1,6 +1,7 @@
 import "dart:typed_data";
 
 import "bit_list.dart";
+import "extensions.dart";
 import "safe_int/env_for_safe_int.dart";
 import "sized_int.dart";
 
@@ -82,8 +83,7 @@ class UintX extends Uint<UintX> {
   }
 
   factory UintX.parse(int bits, String s) {
-    // allow _ wherever in string and just delete it
-    return UintX.fromBigInt(bits, BigInt.parse(s.replaceAll("_", "")));
+    return UintX.fromBigInt(bits, parseWithUnderscores(s));
   }
 
   @override
@@ -145,11 +145,11 @@ class Uint64 extends Uint<Uint64> {
     : super(BitList.fromUnsignedBigInt(64, value));
 
   factory Uint64.parse(String value) {
-    return Uint64.fromBigInt(BigInt.parse(value.replaceAll("_", "")));
+    return Uint64.fromBigInt(parseWithUnderscores(value));
   }
 
   static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
-  static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
+  static BigInt maxAsBigInt = parseWithUnderscores("0xFFFF_FFFF_FFFF_FFFF");
   static final Uint64 zero = Uint64.fromInt(0);
   static final Uint64 one = Uint64.fromInt(1);
 
@@ -165,11 +165,12 @@ class Uint128 extends Uint<Uint128> {
       : super(BitList.fromUnsignedBigInt(128, value));
 
   factory Uint128.parse(String value) {
-    return Uint128.fromBigInt(BigInt.parse(value.replaceAll("_", "")));
+    return Uint128.fromBigInt(parseWithUnderscores(value));
   }
 
-  static Uint64 max = Uint64.fromBigInt(maxAsBigInt);
-  static BigInt maxAsBigInt = BigInt.parse("0xFFFFFFFFFFFFFFFF");
+  static Uint128 max = Uint128.fromBigInt(maxAsBigInt);
+  static BigInt maxAsBigInt =
+      parseWithUnderscores("0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF");
   static final Uint128 zero = Uint128.fromInt(0);
   static final Uint128 one = Uint128.fromInt(1);
 

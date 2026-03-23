@@ -8,16 +8,31 @@ import "safe_int/env_for_safe_int.dart";
 
 ListEquality<int> leq = ListEquality();
 
+/// A pairing of a Uint32List and a number of bits for representing integers.
+/// Uint32List was chosen because it is safe on native and JS backends.
+///
+/// The bits are stored in indices 0 - (bits ~/ bitsPerListElement), most
+/// significant bits first. All elements except perhaps the 0th are full. In
+/// the 0th element, the rightmost (bits % bitsPerListElement) bits are
+/// used and the others are ignored.
+///
+/// Whether the left-most bit is a sign bit or not
+/// is determined by whether the BitList is used in a IntX or UintX, not
+/// the BitList itself.
 class BitList {
+  /// The number of bits used in this BitList.
   final int bits;
   // note that these are coupled, if bitsPerListElement were changed to
   // 16 or 64, the type of uints would need to be Uint16List or Uint64List,
   // for example
+  /// The bits themselves, stored most-significant to least.
   final Uint32List uints;
   static const bitsPerListElement = 32;
 
   BitList._(this.bits, this.uints);
 
+  /// Constructs a BitList with the given number of bits and the
+  /// Uint32List given.
   factory BitList(int bits, Uint32List uints) {
     if (bits < 1) {
       throw ArgumentError("bits must be 1 one or greater, given: $bits");
@@ -37,14 +52,20 @@ class BitList {
     return BitList._(bits, uints);
   }
 
+  /// Convenience for BitList(bits, Uint32List.fromList(uints)).
   factory BitList.ints(int bits, List<int> uints) {
     return BitList(bits, Uint32List.fromList(uints));
   }
 
+  /// Convenience for BitList(bits, Uint32List.fromList([uint]).
   factory BitList.int(int bits, int uint) {
     return BitList(bits, Uint32List.fromList([uint]));
   }
 
+  /// Creates a BitList representing the given int and the given number of bits.
+  ///
+  /// If the int would not fit in a 32-bit value, the least-significant bits
+  /// will end up in uints[1] and the most-significant in uints[0].
   factory BitList.fromUnsignedInt(int bits, int value) {
     if (value < 0) {
       throw ArgumentError("value must be >= 0, given: $value");
@@ -61,6 +82,11 @@ class BitList {
     return BitList(bits, result);
   }
 
+  /// Creates a BitList representing the given BigInt and the given
+  /// number of bits.
+  ///
+  /// The least-significant bits are stored toward the back of the list and the
+  /// most significant toward the front.
   factory BitList.fromUnsignedBigInt(int bits, BigInt value) {
     if (value < BigInt.zero) {
       throw ArgumentError("value must be >= 0, given: $value");
@@ -76,6 +102,8 @@ class BitList {
     return BitList(bits, result);
   }
 
+  /// Creates a BitList representing the given value in two's complement with
+  /// the given number of bits.
   factory BitList.fromSignedInt(int bits, int value) {
     _checkIntSafeForPlatform(value);
     _checkIntFitsInGivenBits(bits, value, isSigned: true);
@@ -97,6 +125,8 @@ class BitList {
     return newValue;
   }
 
+  /// Creates a BitList representing the given BigInt in two's complement with
+  /// the given number of bits.
   factory BitList.fromSignedBigInt(int bits, BigInt value) {
     _checkBigIntFitsInGivenBits(bits, value, isSigned: true);
     Uint32List result = Uint32List(expectedLength(bits));
@@ -115,19 +145,25 @@ class BitList {
     return newValue;
   }
 
+  /// Convenience for uints.length.
   int get length => uints.length;
 
+  /// The length of list needed to represent bits bits.
   static int expectedLength(int bits) => (bits / bitsPerListElement).ceil();
 
+  /// Return an immutable copy.
   BitList copy() {
     return BitList(bits, uints);
   }
 
   @override
+  /// Whether this and other are BitLists with the same bits and uints values.
+  ///
+  /// The uints of each are checked for element equality, not referential
+  /// equality.
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is BitList &&
-          runtimeType == other.runtimeType &&
           bits == other.bits &&
           leq.equals(uints, other.uints);
 
@@ -135,6 +171,11 @@ class BitList {
   int get hashCode => Object.hash(bits, leq.hash(uints));
   int? _bitLength;
 
+  /// The number of significant bits in this BitList.
+  ///
+  /// Note that if this BitList is being used to represent a negative number,
+  /// all leading ones are considered significant. IntX.bitLength returns
+  /// the expected bitLength for a positive or negative number.
   int get bitLength {
     _bitLength ??= _calculateBitLength();
     return _bitLength!;
@@ -150,7 +191,9 @@ class BitList {
     return 0;
   }
 
+  /// Whether this BitList has any non-zero elements.
   bool get isNonZero => uints.any((x) => x != 0);
+  /// Whether this BitList is all zero elements.
   bool get isZero => !isNonZero;
 
   /// Finds the nth bit in this BitList, 0-indexed, counting from the right

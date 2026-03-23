@@ -5,8 +5,7 @@ import "extensions.dart";
 import "safe_int/env_for_safe_int.dart";
 import "sized_int.dart";
 
-/// Value is stored as a big-endian int. If the value is negative,
-/// uint32List.first is padded with 1s.
+/// Value is stored as a big-endian int.
 abstract class Int<T extends Int<T>> extends SizedInt<T> {
   Int(super.bitList);
 
