@@ -4,7 +4,7 @@ version: 0.1.0
 repository: https://github.com/toddobryan/sized_ints
 
 environment:
-  sdk: ^3.10.4
+  sdk: ^3.11.3
 
 dev_dependencies:
   checks: ^0.3.0

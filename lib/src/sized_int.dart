@@ -70,7 +70,7 @@ abstract class SizedInt<T extends SizedInt<T>> {
   @override
   /// A base-10 representation of the SizedInt with a suffix indicating whether
   /// signed or unsigned and the number of bits.
-  String toString() => toRadixString(10);
+  String toString() => hex; // Change back to 10
 
   /// Equivalent to toRadixString(2).
   String get bin => toRadixString(2);
